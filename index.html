@@ -46,7 +46,7 @@
   a{color:inherit;text-decoration:none}
   button{font:inherit;color:inherit}
   .bar-link{background:none;border:0;padding:0}
-  .bar-link:focus-visible,.proj-item:focus-visible,.skill-header:focus-visible,.btn-red:focus-visible,.c-action:focus-visible{outline:2px solid var(--accent);outline-offset:5px}
+  .bar-link:focus-visible,.proj-item:focus-visible,.skill-tab:focus-visible,.btn-red:focus-visible,.c-action:focus-visible{outline:2px solid var(--accent);outline-offset:5px}
   .serif{font-family:var(--font-accent);font-style:italic;color:var(--accent);font-weight:400}
   .micro{
     font-size:.7rem;font-weight:400;letter-spacing:.22em;text-transform:uppercase;color:var(--dim);
@@ -76,8 +76,50 @@
   .no-motion .pre-name,.no-motion .reveal-phrase,.no-motion .stmt-line,.no-motion [data-reveal]{opacity:1!important;transform:none!important}
   .no-motion #hero-line{transform:scaleX(1)!important}
   .no-motion .g-card{display:none!important}
-  .no-motion .skill-body,.no-motion .cert-body{max-height:none!important}
+  .no-motion .cert-body{max-height:none!important}
+  .no-motion .skill-panel{display:block!important}
   .no-motion .gallery-stage,.no-motion .reveal-stage{height:auto!important;padding:89px 0}
+
+  /* ============ Sticky header + scroll progress ============ */
+  #progress{
+    position:fixed;top:0;left:0;height:2px;width:100%;z-index:95;
+    background:var(--accent);transform:scaleX(0);transform-origin:0 50%;
+    will-change:transform;
+  }
+  #topnav{
+    position:fixed;top:0;left:0;right:0;z-index:90;
+    display:flex;align-items:center;justify-content:space-between;gap:21px;
+    padding:13px 4vw;background:rgba(10,10,10,.82);
+    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    border-bottom:1px solid var(--line);
+    transform:translateY(-101%);transition:transform .45s cubic-bezier(.77,0,.18,1);
+  }
+  #topnav.show{transform:none}
+  .tn-name{
+    font-family:var(--font-display);font-weight:600;font-size:.78rem;
+    letter-spacing:.14em;text-transform:uppercase;white-space:nowrap;
+  }
+  .tn-links{display:flex;gap:21px;align-items:center;flex-wrap:wrap}
+  .tn-links a{
+    font-size:.74rem;font-weight:500;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--dim);padding:8px 0;transition:color .25s;
+  }
+  .tn-links a:hover,.tn-links a:focus-visible{color:var(--fg)}
+  .tn-links a.current{color:var(--accent)}
+  #recruiter-btn{
+    border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer;
+    font-family:var(--font-display);font-size:.7rem;font-weight:600;letter-spacing:.14em;
+    text-transform:uppercase;padding:9px 16px;border-radius:999px;white-space:nowrap;
+    transition:background .25s,color .25s;
+  }
+  #recruiter-btn:hover{background:rgba(109,158,255,.12)}
+  #recruiter-btn[aria-pressed="true"]{background:var(--accent);color:#0a0a0a}
+  @media(max-width:700px){
+    .tn-name{display:none}
+    .tn-links{gap:13px}
+    .tn-links a{font-size:.68rem;letter-spacing:.1em}
+    #recruiter-btn{font-size:.62rem;padding:8px 12px;letter-spacing:.1em}
+  }
 
   /* ============ Hero ============ */
   .hero{position:relative;height:100vh;height:100svh;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden}
@@ -182,6 +224,38 @@
     mix-blend-mode:screen;
   }
 
+  /* ============ How I think ============ */
+  .process{padding:8vh 4vw 12vh}
+  .process-steps{list-style:none;display:grid;grid-template-columns:repeat(5,1fr);gap:13px;position:relative;margin-top:34px}
+  .process-steps::before{content:"";position:absolute;top:7px;left:1%;right:1%;height:1px;background:var(--line)}
+  .process-steps li{position:relative;padding-top:34px;opacity:0;transform:translateY(16px)}
+  .process-steps li.in{opacity:1;transform:none;transition:opacity .6s ease,transform .6s ease}
+  .process-steps li::before{
+    content:"";position:absolute;top:0;left:0;width:15px;height:15px;border-radius:50%;
+    background:var(--bg);border:2px solid var(--line);transition:border-color .5s ease,background .5s ease;
+  }
+  .process-steps li.in::before{border-color:var(--accent)}
+  .ps-num{display:block;font-family:var(--font-display);font-weight:700;font-size:.8rem;color:var(--accent);letter-spacing:.1em}
+  .ps-label{display:block;font-family:var(--font-display);font-weight:600;font-size:clamp(1rem,1.7vw,1.3125rem);margin-top:5px}
+
+  /* ============ Recruiter View ============ */
+  .recruiter #statement,.recruiter #reveal-sec,.recruiter .gallery,.recruiter #process,
+  .recruiter #hero-canvas,.recruiter #blob,.recruiter #preview,.recruiter #cursor,
+  .recruiter .skill-tabs,.recruiter #scroll-pct{display:none!important}
+  .recruiter .hero{height:auto;min-height:0;padding:89px 4vw 34px}
+  .recruiter .hero-tags{margin:13px 0 21px}
+  .recruiter #topnav{transform:none}
+  .recruiter .skill-panel{display:block!important;margin-bottom:21px}
+  .recruiter .skill-panel::before{
+    content:attr(aria-label);display:block;font-family:var(--font-display);font-weight:600;
+    font-size:.95rem;color:var(--steel);margin-bottom:8px;
+  }
+  .recruiter .cert-body{max-height:none!important}
+  .recruiter .cert-toggle{display:none}
+  .recruiter section{padding-top:34px!important;padding-bottom:34px!important}
+  .recruiter .about{padding:34px 4vw!important}
+  .recruiter [data-reveal]{opacity:1!important;transform:none!important}
+
   /* ============ Work ============ */
   .work{padding:14vh 4vw 10vh;position:relative}
   .sec-head{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:2vh}
@@ -195,6 +269,12 @@
     transition:padding .45s cubic-bezier(.77,0,.18,1),border-color .45s ease,background .45s ease;
   }
   .proj-item:hover{border-bottom-color:rgba(109,158,255,.5);background:rgba(240,240,240,.025)}
+  .proj-item::after{
+    content:"\2192";margin-left:13px;align-self:center;flex:none;
+    color:var(--accent);font-size:1.1rem;opacity:.4;
+    transition:opacity .3s ease,transform .3s ease;
+  }
+  .proj-item:hover::after,.proj-item:focus-visible::after{opacity:1;transform:translateX(6px)}
   .proj-item::before{
     counter-increment:proj;content:"0" counter(proj);
     font-size:.75rem;color:var(--dim);font-weight:600;letter-spacing:.1em;flex-shrink:0;
@@ -323,25 +403,24 @@
     font-size:clamp(1.125rem,1.9vw,1.3125rem);line-height:1.45;max-width:34ch;margin-top:21px;
   }
   .skills-sep{height:1px;background:var(--line);margin:5vh 0}
-  .skill-group{border-top:1px solid var(--line)}
-  .skill-group:last-child{border-bottom:1px solid var(--line)}
-  .skill-header{
-    display:flex;justify-content:space-between;align-items:center;width:100%;
-    padding:21px 8px;cursor:pointer;background:transparent;border:0;text-align:left;
+  .skill-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:21px}
+  .skill-tab{
+    background:transparent;border:1px solid var(--line);border-radius:999px;color:var(--dim);
+    cursor:pointer;font-family:var(--font-display);font-weight:500;font-size:.78rem;
+    padding:9px 16px;transition:border-color .25s,color .25s,background .25s;
   }
-  .skill-header h3{font-family:var(--font-display);font-weight:500;font-size:clamp(1.05rem,1.8vw,1.3125rem);letter-spacing:-.01em}
-  .skill-header .icon{
-    width:14px;height:14px;position:relative;flex-shrink:0;transition:transform .4s cubic-bezier(.77,0,.18,1);
+  .skill-tab:hover{color:var(--fg);border-color:rgba(109,158,255,.5)}
+  .skill-tab[aria-selected="true"]{border-color:var(--accent);color:var(--fg);background:rgba(109,158,255,.12)}
+  .skill-tab:focus-visible{outline:2px solid var(--accent);outline-offset:4px}
+  .skill-panel{display:none}
+  .skill-panel.active{display:block;animation:panelIn .35s ease both}
+  @keyframes panelIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .skill-panel ul{list-style:none;display:flex;flex-wrap:wrap;gap:8px;padding:0 0 8px}
+  .skill-panel li{
+    border:1px solid var(--accent);border-radius:999px;padding:8px 21px;font-size:.85rem;
+    color:var(--fg);transition:background .25s ease,transform .25s ease;
   }
-  .skill-header .icon::before,.skill-header .icon::after{
-    content:"";position:absolute;background:var(--accent);left:0;top:6px;width:14px;height:2px;
-  }
-  .skill-header .icon::after{transform:rotate(90deg)}
-  .skill-group.open .skill-header .icon{transform:rotate(135deg)}
-  .skill-body{max-height:0;overflow:hidden;transition:max-height .55s cubic-bezier(.77,0,.18,1)}
-  .skill-body ul{list-style:none;display:flex;flex-wrap:wrap;gap:8px;padding:0 8px 34px}
-  .skill-body li{border:1px solid var(--accent);border-radius:999px;padding:8px 21px;font-size:.85rem;color:var(--fg);transition:background .25s ease,transform .25s ease}
-  .skill-body li:hover{background:rgba(109,158,255,.12);transform:translateY(-2px)}
+  .skill-panel li:hover{background:rgba(109,158,255,.12);transform:translateY(-2px)}
 
   /* ============ Track record (awards-style table) ============ */
   .record{padding:6vh 4vw 16vh}
@@ -376,6 +455,13 @@
     transition:transform .3s ease,border-color .3s ease,box-shadow .3s ease;
   }
   .cert-card:hover{transform:translateY(-4px);border-color:rgba(109,158,255,.5);box-shadow:0 21px 55px rgba(0,0,0,.45)}
+  .cert-badge{position:relative}
+  .cert-badge::after{
+    content:"\2713";position:absolute;right:-5px;bottom:-5px;
+    width:16px;height:16px;border-radius:50%;background:var(--accent);color:#0a0a0a;
+    font-size:9px;font-weight:700;line-height:16px;text-align:center;
+    border:2px solid var(--bg);
+  }
   .cert-top{display:flex;gap:13px;align-items:flex-start}
   .cert-badge{
     width:44px;height:44px;border-radius:10px;flex:none;
@@ -494,6 +580,9 @@
     .d-grid{grid-template-columns:1fr;gap:5vh}
     .c-grid{grid-template-columns:1fr;gap:6vh}
     .numbers-grid{grid-template-columns:1fr 1fr}
+    .process-steps{grid-template-columns:1fr;gap:21px}
+    .process-steps::before{top:2%;bottom:2%;left:7px;right:auto;width:1px;height:auto}
+    .process-steps li{padding-top:0;padding-left:34px}
     .journey-track{grid-template-columns:1fr;gap:21px}
     .journey-track::before{top:2%;bottom:2%;left:6px;right:auto;width:1px;height:auto}
     .j-node{padding-top:0;padding-left:34px}
@@ -525,6 +614,18 @@
     <div class="pre-caption" id="pre-caption">Business Analyst</div>
   </div>
 </div>
+
+<div id="progress" aria-hidden="true"></div>
+<header id="topnav">
+  <span class="tn-name">Beri Vishnu Vardhan Reddy</span>
+  <nav class="tn-links" aria-label="Section navigation">
+    <a href="#work">Work</a>
+    <a href="#about">About</a>
+    <a href="cv.html" target="_blank" rel="noopener">Resume</a>
+    <a href="#contact">Contact</a>
+  </nav>
+  <button id="recruiter-btn" type="button" aria-pressed="false">Recruiter View</button>
+</header>
 
 <main id="main">
 <!-- ============ HERO ============ -->
@@ -629,6 +730,20 @@
   </div>
 </section>
 
+<!-- ============ HOW I THINK ============ -->
+<section class="process" id="process">
+  <div class="sec-head">
+    <h2 class="sec-title">How I think</h2>
+  </div>
+  <ol class="process-steps" id="process-steps">
+    <li><span class="ps-num">01</span><span class="ps-label">Understand</span></li>
+    <li><span class="ps-num">02</span><span class="ps-label">Structure</span></li>
+    <li><span class="ps-num">03</span><span class="ps-label">Analyse</span></li>
+    <li><span class="ps-num">04</span><span class="ps-label">Recommend</span></li>
+    <li><span class="ps-num">05</span><span class="ps-label">Implement</span></li>
+  </ol>
+</section>
+
 <!-- ============ WORK ============ -->
 <section class="work" id="work">
   <div class="sec-head">
@@ -714,37 +829,19 @@
     <div class="skills-sep"></div>
     <a class="bar-link" href="#contact" data-roll="Contact me ↗">Contact me ↗</a>
   </div>
-  <div id="skill-groups">
-    <div class="skill-group open">
-      <button class="skill-header" type="button" aria-expanded="false"><h3>Business Analysis &amp; Process Improvement</h3><span class="icon" aria-hidden="true"></span></button>
-      <div class="skill-body"><ul>
-        <li>Process mapping</li><li>Requirements gathering</li><li>Root cause analysis</li><li>RACI matrix design</li><li>Enterprise risk management</li><li>Life cycle assessment</li><li>PESTLE / SWOT</li>
-      </ul></div>
+    <div id="skill-groups">
+    <div class="skill-tabs" role="tablist" aria-label="Skill categories">
+      <button class="skill-tab" type="button" role="tab" id="stab-0" aria-controls="spanel-0" aria-selected="true" tabindex="0">Business Analysis &amp; Process Improvement</button>
+      <button class="skill-tab" type="button" role="tab" id="stab-1" aria-controls="spanel-1" aria-selected="false" tabindex="-1">Analytics &amp; Decision Support</button>
+      <button class="skill-tab" type="button" role="tab" id="stab-2" aria-controls="spanel-2" aria-selected="false" tabindex="-1">Stakeholder &amp; Business Communication</button>
+      <button class="skill-tab" type="button" role="tab" id="stab-3" aria-controls="spanel-3" aria-selected="false" tabindex="-1">Tools</button>
+      <button class="skill-tab" type="button" role="tab" id="stab-4" aria-controls="spanel-4" aria-selected="false" tabindex="-1">Finance &amp; Operations</button>
     </div>
-    <div class="skill-group">
-      <button class="skill-header" type="button" aria-expanded="false"><h3>Analytics &amp; Decision Support</h3><span class="icon" aria-hidden="true"></span></button>
-      <div class="skill-body"><ul>
-        <li>Quantitative modelling</li><li>SODA cognitive mapping</li><li>Multi-Criteria Decision Analysis (MCDA)</li><li>Demand forecasting (Holt-Winters)</li><li>Sensitivity analysis</li><li>Weighted scoring models</li><li>Regression analysis (SPSS)</li>
-      </ul></div>
-    </div>
-    <div class="skill-group">
-      <button class="skill-header" type="button" aria-expanded="false"><h3>Stakeholder &amp; Business Communication</h3><span class="icon" aria-hidden="true"></span></button>
-      <div class="skill-body"><ul>
-        <li>Stakeholder mapping</li><li>International team collaboration</li><li>Client-style reporting</li><li>Plain-language translation</li><li>Supplier management</li><li>Cross-functional alignment</li>
-      </ul></div>
-    </div>
-    <div class="skill-group">
-      <button class="skill-header" type="button" aria-expanded="false"><h3>Tools</h3><span class="icon" aria-hidden="true"></span></button>
-      <div class="skill-body"><ul>
-        <li>Excel (Advanced + VBA macros)</li><li>Power BI (Data modelling)</li><li>SPSS</li><li>OpenLCA</li><li>PowerPoint</li><li>Word &amp; Outlook</li><li>Google Workspace</li>
-      </ul></div>
-    </div>
-    <div class="skill-group">
-      <button class="skill-header" type="button" aria-expanded="false"><h3>Finance &amp; Operations</h3><span class="icon" aria-hidden="true"></span></button>
-      <div class="skill-body"><ul>
-        <li>Financial accounting</li><li>Auditing &amp; reconciliation</li><li>Cost &amp; margin analysis</li><li>Operational oversight</li><li>Supplier contract coordination</li><li>Cash flow tracking</li>
-      </ul></div>
-    </div>
+    <div class="skill-panel active" role="tabpanel" id="spanel-0" aria-labelledby="stab-0" aria-label="Business Analysis &amp; Process Improvement"><ul><li>Process mapping</li><li>Requirements gathering</li><li>Root cause analysis</li><li>RACI matrix design</li><li>Enterprise risk management</li><li>Life cycle assessment</li><li>PESTLE / SWOT</li></ul></div>
+    <div class="skill-panel" role="tabpanel" id="spanel-1" aria-labelledby="stab-1" aria-label="Analytics &amp; Decision Support"><ul><li>Quantitative modelling</li><li>SODA cognitive mapping</li><li>Multi-Criteria Decision Analysis (MCDA)</li><li>Demand forecasting (Holt-Winters)</li><li>Sensitivity analysis</li><li>Weighted scoring models</li><li>Regression analysis (SPSS)</li></ul></div>
+    <div class="skill-panel" role="tabpanel" id="spanel-2" aria-labelledby="stab-2" aria-label="Stakeholder &amp; Business Communication"><ul><li>Stakeholder mapping</li><li>International team collaboration</li><li>Client-style reporting</li><li>Plain-language translation</li><li>Supplier management</li><li>Cross-functional alignment</li></ul></div>
+    <div class="skill-panel" role="tabpanel" id="spanel-3" aria-labelledby="stab-3" aria-label="Tools"><ul><li>Excel (Advanced + VBA macros)</li><li>Power BI (Data modelling)</li><li>SPSS</li><li>OpenLCA</li><li>PowerPoint</li><li>Word &amp; Outlook</li><li>Google Workspace</li></ul></div>
+    <div class="skill-panel" role="tabpanel" id="spanel-4" aria-labelledby="stab-4" aria-label="Finance &amp; Operations"><ul><li>Financial accounting</li><li>Auditing &amp; reconciliation</li><li>Cost &amp; margin analysis</li><li>Operational oversight</li><li>Supplier contract coordination</li><li>Cash flow tracking</li></ul></div>
   </div>
 </section>
 
@@ -1531,27 +1628,28 @@ addEventListener('keydown', e => { if (e.key === 'Escape' && detailOpen) closeDe
   });
 })();
 
-/* ================= Skills accordion ================= */
-document.querySelectorAll('.skill-group').forEach(g => {
-  const body = g.querySelector('.skill-body');
-  const set = () => {
-    const open = g.classList.contains('open');
-    body.style.maxHeight = open ? body.scrollHeight + 'px' : '0px';
-    g.querySelector('.skill-header').setAttribute('aria-expanded', open);
-  };
-  set();
-  g.querySelector('.skill-header').addEventListener('click', () => {
-    document.querySelectorAll('.skill-group.open').forEach(o => {
-      if (o !== g) {
-        o.classList.remove('open');
-        o.querySelector('.skill-body').style.maxHeight = '0px';
-        o.querySelector('.skill-header').setAttribute('aria-expanded', false);
-      }
-    });
-    g.classList.toggle('open'); set();
+/* ================= Skills tabs ================= */
+(() => {
+  const tabs = [...document.querySelectorAll('.skill-tab')];
+  const panels = [...document.querySelectorAll('.skill-panel')];
+  if (!tabs.length) return;
+  const select = i => tabs.forEach((t, j) => {
+    const on = i === j;
+    t.setAttribute('aria-selected', on ? 'true' : 'false');
+    t.tabIndex = on ? 0 : -1;
+    panels[j].classList.toggle('active', on);
   });
-  addEventListener('resize', set);
-});
+  tabs.forEach((t, i) => {
+    t.addEventListener('click', () => select(i));
+    t.addEventListener('keydown', e => {
+      const d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+      if (!d) return;
+      e.preventDefault();
+      const n = (i + d + tabs.length) % tabs.length;
+      tabs[n].focus(); select(n);
+    });
+  });
+})();
 
 
 
@@ -1573,6 +1671,84 @@ ScrollTrigger.create({
   onUpdate: self => pct.textContent = `(${Math.round(self.progress * 100)})`
 });
 
+/* ================= Sticky header, progress bar, section highlighting ================= */
+(() => {
+  const nav = document.getElementById('topnav');
+  const bar = document.getElementById('progress');
+  const links = [...document.querySelectorAll('.tn-links a[href^="#"]')];
+  const hero = document.getElementById('top');
+  const setProgress = p => bar.style.transform = `scaleX(${p})`;
+  const update = () => {
+    const max = document.documentElement.scrollHeight - innerHeight;
+    setProgress(max > 0 ? Math.min(1, scrollY / max) : 0);
+    nav.classList.toggle('show', scrollY > hero.offsetHeight * .7);
+    let active = '';
+    links.forEach(a => {
+      const sec = document.querySelector(a.getAttribute('href'));
+      if (sec && sec.getBoundingClientRect().top <= innerHeight * .35) active = a.getAttribute('href');
+    });
+    links.forEach(a => a.classList.toggle('current', a.getAttribute('href') === active));
+  };
+  addEventListener('scroll', update, { passive: true });
+  addEventListener('resize', update);
+  if (typeof lenis !== 'undefined' && lenis) lenis.on('scroll', update);
+  update();
+})();
+
+/* ================= Animated statistics ================= */
+(() => {
+  const nodes = [...document.querySelectorAll('.numbers-grid b')];
+  nodes.forEach(el => {
+    const final = el.textContent;
+    const m = final.match(/^(\D*)(\d[\d,]*)(.*)$/);
+    if (!m) return;
+    const [, pre, numStr, suf] = m;
+    const target = parseInt(numStr.replace(/,/g, ''), 10);
+    if (!isFinite(target)) return;
+    if (reduceMotion) return;
+    ScrollTrigger.create({
+      trigger: el, start: 'top 92%', once: true,
+      onEnter: () => {
+        const o = { v: 0 };
+        gsap.to(o, {
+          v: target, duration: 1.1, ease: 'power2.out',
+          onUpdate: () => { el.textContent = pre + Math.round(o.v) + suf; },
+          onComplete: () => { el.textContent = final; }
+        });
+      }
+    });
+  });
+})();
+
+/* ================= How I think: stage reveal ================= */
+(() => {
+  const steps = [...document.querySelectorAll('.process-steps li')];
+  if (!steps.length) return;
+  if (reduceMotion) { steps.forEach(s => s.classList.add('in')); return; }
+  steps.forEach((li, i) => ScrollTrigger.create({
+    trigger: li, start: 'top 88%', once: true,
+    onEnter: () => setTimeout(() => li.classList.add('in'), i * 110)
+  }));
+})();
+
+/* ================= Recruiter View ================= */
+(() => {
+  const btn = document.getElementById('recruiter-btn');
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    const on = document.documentElement.classList.toggle('recruiter');
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    document.querySelectorAll('.skill-panel').forEach(x => x.classList.toggle('active', on ? true : x.id === 'spanel-0'));
+    document.querySelectorAll('.cert-card').forEach(c => {
+      const b = c.querySelector('.cert-body');
+      if (b) b.style.maxHeight = on ? b.scrollHeight + 'px' : '0px';
+      c.classList.toggle('open', on);
+    });
+    if (typeof lenis !== 'undefined' && lenis) lenis.scrollTo(0, { immediate: true }); else scrollTo(0, 0);
+    if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh();
+  });
+})();
+
 document.documentElement.setAttribute('data-ready', '1');
 </script>
 
@@ -1584,7 +1760,8 @@ document.documentElement.setAttribute('data-ready', '1');
   document.documentElement.classList.add('no-motion');
   var pre = document.getElementById('preloader');
   if (pre && pre.parentNode) pre.parentNode.removeChild(pre);
-  document.querySelectorAll('.skill-body, .cert-body').forEach(function (b) { b.style.maxHeight = 'none'; });
+  document.querySelectorAll('.cert-body').forEach(function (b) { b.style.maxHeight = 'none'; });
+  document.querySelectorAll('.skill-panel').forEach(function (x) { x.classList.add('active'); });
 })();
 </script>
 </body>
