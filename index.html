@@ -15,6 +15,7 @@
 <meta name="twitter:card" content="summary">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500&display=swap">
 <style>
   :root{
@@ -69,6 +70,14 @@
     opacity:0;font-family:var(--font-display);font-size:clamp(.95rem,2vw,1.3125rem);
     font-weight:500;letter-spacing:.3em;text-transform:uppercase;color:var(--dim);
   }
+
+  /* ============ Safety net: animation libraries unavailable ============ */
+  .no-motion #preloader{display:none!important}
+  .no-motion .pre-name,.no-motion .reveal-phrase,.no-motion .stmt-line,.no-motion [data-reveal]{opacity:1!important;transform:none!important}
+  .no-motion #hero-line{transform:scaleX(1)!important}
+  .no-motion .g-card{display:none!important}
+  .no-motion .skill-body,.no-motion .cert-body{max-height:none!important}
+  .no-motion .gallery-stage,.no-motion .reveal-stage{height:auto!important;padding:89px 0}
 
   /* ============ Hero ============ */
   .hero{position:relative;height:100vh;height:100svh;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden}
@@ -127,7 +136,7 @@
   .hero-bar{display:flex;justify-content:space-between;align-items:center;gap:24px;flex-wrap:wrap}
   .hero-bar nav{display:flex;gap:22px;align-items:center}
   .hero-bar .sep{color:var(--dim)}
-  .bar-link{font-size:.8rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;position:relative;cursor:pointer}
+  .bar-link{font-size:.8rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;position:relative;cursor:pointer;display:inline-block;padding:7px 0}
   .bar-link .roll{display:inline-block;position:relative;overflow:hidden;vertical-align:top}
   .bar-link .roll i{display:block;font-style:normal;transition:transform .35s cubic-bezier(.77,0,.18,1)}
   .bar-link .roll i:nth-child(2){position:absolute;left:0;top:100%;color:var(--accent)}
@@ -517,6 +526,7 @@
   </div>
 </div>
 
+<main id="main">
 <!-- ============ HERO ============ -->
 <section class="hero" id="top">
   <h1 class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)">
@@ -604,7 +614,7 @@
       </div>
     </div>
     <div class="about-photo" data-reveal>
-      <img src="me.jpg" alt="Beri Vishnu Vardhan Reddy" loading="lazy">
+      <img src="me.jpg" alt="Beri Vishnu Vardhan Reddy" width="1122" height="1402" loading="lazy" decoding="async">
     </div>
   </div>
 </section>
@@ -920,10 +930,12 @@
   </div>
 </section>
 
+</main>
+
 <!-- ============ FOOTER ============ -->
 
 <!-- ============ DETAIL OVERLAY ============ -->
-<section id="detail" aria-modal="true" role="dialog" aria-label="Project detail" data-lenis-prevent tabindex="-1">
+<section id="detail" aria-modal="true" role="dialog" aria-label="Project detail" data-lenis-prevent tabindex="-1" inert aria-hidden="true">
   <button class="d-back bar-link" id="d-back" type="button" data-roll="← Back">← Back</button>
   <div class="d-head">
     <div class="d-titlewrap">
@@ -1436,6 +1448,8 @@ const META = {
 const ORDER = ['vfx', 'erm', 'census', 'lca', 'soda', 'forecast'];
 
 const detail = document.getElementById('detail');
+const pageMain = document.getElementById('main');
+let lastOpener = null;
 const dNext = document.getElementById('d-next');
 let detailOpen = false;
 function openDetail(id) {
@@ -1463,6 +1477,10 @@ function openDetail(id) {
   detail.scrollTop = 0;
   detailOpen = true;
   lenis && lenis.stop();
+  if (!wasOpen) lastOpener = document.activeElement;
+  detail.removeAttribute('inert');
+  detail.removeAttribute('aria-hidden');
+  pageMain && pageMain.setAttribute('inert', '');
   detail.focus({ preventScroll: true });
   gsap.to(detail, { y: 0, duration: reduceMotion ? 0 : .7, ease: 'power4.inOut', onComplete: () => detail.classList.add('open') });
   if (!reduceMotion) gsap.from('#detail .d-head > *, #d-body > *, #d-illus, .d-metrics div, .d-tags span, #d-next', {
@@ -1474,6 +1492,10 @@ function closeDetail() {
   detailOpen = false;
   detail.classList.remove('open');
   lenis && lenis.start();
+  detail.setAttribute('inert', '');
+  detail.setAttribute('aria-hidden', 'true');
+  pageMain && pageMain.removeAttribute('inert');
+  if (lastOpener && typeof lastOpener.focus === 'function') lastOpener.focus({ preventScroll: true });
   gsap.to(detail, { y: '101%', duration: reduceMotion ? 0 : .6, ease: 'power4.inOut' });
 }
 document.querySelectorAll('.proj-item').forEach(i =>
@@ -1550,6 +1572,20 @@ ScrollTrigger.create({
   trigger: document.body, start: 'top top', end: 'bottom bottom',
   onUpdate: self => pct.textContent = `(${Math.round(self.progress * 100)})`
 });
+
+document.documentElement.setAttribute('data-ready', '1');
+</script>
+
+<script>
+/* Safety net: if the CDN libraries or the main script fail, reveal the page anyway
+   instead of leaving the visitor on the preloader. */
+(function () {
+  if (document.documentElement.hasAttribute('data-ready')) return;
+  document.documentElement.classList.add('no-motion');
+  var pre = document.getElementById('preloader');
+  if (pre && pre.parentNode) pre.parentNode.removeChild(pre);
+  document.querySelectorAll('.skill-body, .cert-body').forEach(function (b) { b.style.maxHeight = 'none'; });
+})();
 </script>
 </body>
 </html>
