@@ -135,9 +135,6 @@
   /* Overlay and hover chrome */
   #detail{transition:transform .7s var(--ease)}
   body.locked{overflow:hidden}
-  #preview,#cursor{transition:opacity .3s ease,transform .12s linear}
-  #preview.show,#cursor.show{opacity:1}
-  #cursor{transform-origin:50% 50%}
   @media(prefers-reduced-motion:reduce){
     .pre-name,.pre-caption{animation:none!important;opacity:1!important}
     [data-reveal],.stmt-line,.proj-item,.process-steps li,
@@ -330,11 +327,16 @@
   .proj-kind{margin-left:auto;text-align:right;flex-shrink:0}
   .proj-item:hover .proj-name{transform:translateX(10px);color:var(--accent)}
   .proj-item:active .proj-name{transform:translateX(10px) scale(.995)}
-  /* hover preview card */
-  #preview{
-    position:fixed;top:0;left:0;z-index:40;width:330px;pointer-events:none;opacity:0;
+  /* Docked preview: stays put, never covers the list */
+  .work-grid{display:grid;grid-template-columns:1fr;gap:34px;align-items:start}
+  .work-preview{display:none}
+  @media(min-width:1180px){
+    .work-grid{grid-template-columns:minmax(0,1fr) 360px;gap:55px}
+    .work-preview{display:block;position:sticky;top:96px}
   }
-  #preview .p-meta{display:flex;justify-content:space-between;margin-bottom:8px}
+  .work-preview .cover{transition:opacity .45s var(--ease)}
+  .wp-caption{display:flex;justify-content:space-between;align-items:center;gap:13px;margin-top:13px}
+  .wp-caption .micro:last-child{color:var(--accent)}
   .cover{
     aspect-ratio:4/3;border:1px solid var(--line);position:relative;overflow:hidden;
     display:flex;flex-direction:column;justify-content:flex-end;padding:20px;
@@ -361,13 +363,6 @@
   }
   .d-figcap span:first-child{color:var(--accent)}
   .d-illus>svg{position:absolute;inset:0;width:100%;height:100%}
-  #cursor{
-    position:fixed;top:0;left:0;z-index:41;pointer-events:none;
-    background:var(--accent);color:#0a0a0a;
-    font-size:.72rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
-    padding:10px 16px;border-radius:999px;white-space:nowrap;
-    opacity:0;transform:translate(-50%,-50%) scale(.6);
-  }
 
   /* ============ Detail overlay ============ */
   #detail{
@@ -635,7 +630,6 @@
     #scroll-pct,#st-label{display:none}
   }
   @media(hover:none){
-    #preview,#cursor{display:none!important}
   }
   @media(prefers-reduced-motion:reduce){
     *,*::before,*::after{animation:none!important;transition:none!important}
@@ -789,6 +783,7 @@
     <h2 class="sec-title">Selected work</h2>
     <span class="micro">2026 · Case studies</span>
   </div>
+  <div class="work-grid">
   <div class="proj-list" id="proj-list">
     <button class="proj-item" type="button" data-id="vfx">
       <div class="proj-main">
@@ -833,14 +828,12 @@
       <div class="proj-kind micro">Inventory Analytics · Excel &amp; VBA</div>
     </button>
   </div>
+  <aside class="work-preview" id="work-preview" aria-hidden="true">
+    <div class="cover" id="p-cover"></div>
+    <div class="wp-caption"><span class="micro" id="wp-label"></span><span class="micro">Explore case →</span></div>
+  </aside>
+  </div>
 </section>
-
-<!-- hover preview + cursor -->
-<div id="preview" aria-hidden="true">
-  <div class="p-meta"><span class="micro" id="p-date">2026</span><span class="micro">Preview</span></div>
-  <div class="cover" id="p-cover"></div>
-</div>
-<div id="cursor" aria-hidden="true">Explore case →</div>
 
 <!-- ============ GALLERY PHRASE ============ -->
 <section class="gallery" aria-label="Philosophy">
@@ -1567,30 +1560,30 @@ revealOnScroll('.proj-item', 60);
 revealOnScroll('.process-steps li', 110);
 revealOnScroll('.sec-title');
 
-/* ================= Project hover preview + cursor ================= */
+/* ================= Docked case preview =================
+   The figure sits in a fixed panel beside the list rather than following the
+   cursor, so it can never cover the text. It updates on hover and on keyboard
+   focus, and shows the first case by default. */
 (() => {
-  const preview = document.getElementById('preview');
-  const cursor = document.getElementById('cursor');
-  const pCover = document.getElementById('p-cover');
-  if (!preview || !cursor || !pCover) return;
-  const fine = matchMedia('(hover: hover) and (pointer: fine)').matches;
-  if (!fine || reduceMotion) return;
-  addEventListener('mousemove', e => {
-    preview.style.transform = `translate(${e.clientX - 360}px, ${e.clientY - 110}px)`;
-    cursor.style.transform = `translate(${e.clientX}px, ${e.clientY}px) translate(-50%,-50%)`;
-  });
-  document.querySelectorAll('.proj-item').forEach(item => {
-    item.addEventListener('mouseenter', () => {
-      const p = PROJECTS[item.dataset.id];
-      pCover.className = 'cover' + (p.red ? ' c-red' : '');
-      pCover.innerHTML = p.svg;
-      preview.classList.add('show');
-      cursor.classList.add('show');
-    });
-    item.addEventListener('mouseleave', () => {
-      preview.classList.remove('show');
-      cursor.classList.remove('show');
-    });
+  const panel = document.getElementById('work-preview');
+  const cover = document.getElementById('p-cover');
+  const label = document.getElementById('wp-label');
+  const items = [...document.querySelectorAll('.proj-item')];
+  if (!panel || !cover || !items.length) return;
+  let current = null;
+  const show = id => {
+    if (id === current) return;
+    const p = PROJECTS[id];
+    if (!p) return;
+    current = id;
+    cover.className = 'cover' + (p.red ? ' c-red' : '');
+    cover.innerHTML = p.svg;
+    if (label) label.textContent = p.title;
+  };
+  show(items[0].dataset.id);
+  items.forEach(item => {
+    item.addEventListener('mouseenter', () => show(item.dataset.id));
+    item.addEventListener('focus', () => show(item.dataset.id));
   });
 })();
 
