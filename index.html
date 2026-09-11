@@ -1298,22 +1298,17 @@ const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 /* Touch devices get animations that never depend on pinning: iOS resizes the
    viewport as its address bar hides, which breaks pinned ScrollTriggers. */
 const isTouch = matchMedia('(hover: none), (pointer: coarse)').matches;
-/* Plays an animation once, on entry, using plain rAF. No ScrollTrigger, no pin. */
-function playOnEnter(el, duration, onFrame) {
-  const run = () => {
-    const t0 = performance.now();
-    const step = now => {
-      const p = Math.min(1, (now - t0) / duration);
-      onFrame(p < 1 ? 1 - Math.pow(1 - p, 3) : 1);
-      if (p < 1) requestAnimationFrame(step);
-    };
-    requestAnimationFrame(step);
+/* Drives an animation from raw scroll position: no pinning, no observers,
+   no library. Scroll events fire on every device, so this cannot silently fail. */
+function scrubOnScroll(el, onFrame) {
+  const update = () => {
+    const r = el.getBoundingClientRect();
+    const span = innerHeight * 0.9 || 1;
+    onFrame(Math.max(0, Math.min(1, (innerHeight - r.top) / span)));
   };
-  if (!('IntersectionObserver' in window)) { onFrame(1); return; }
-  const io = new IntersectionObserver(es => {
-    es.forEach(e => { if (e.isIntersecting) { io.disconnect(); run(); } });
-  }, { threshold: .35 });
-  io.observe(el);
+  addEventListener('scroll', update, { passive: true });
+  addEventListener('resize', update);
+  update();
 }
 const finePointer = matchMedia('(hover:hover) and (pointer:fine)').matches;
 gsap.registerPlugin(ScrollTrigger);
@@ -1469,7 +1464,7 @@ if (reduceMotion) {
   if (reduceMotion) {
     frame(1);
   } else if (isTouch) {
-    playOnEnter(document.getElementById('reveal-sec'), 1600, frame);
+    scrubOnScroll(document.getElementById('reveal-sec'), frame);
   } else {
     ScrollTrigger.create({
       trigger: '#reveal-sec', start: 'top top', end: '+=90%',
@@ -1618,8 +1613,7 @@ addEventListener('keydown', e => { if (e.key === 'Escape' && detailOpen) closeDe
       gsap.set('#g-phrase', { opacity: gsap.utils.clamp(0, 1, (p - .25) / .3) });
   };
   if (isTouch) {
-    frame(0);
-    playOnEnter(document.querySelector('.gallery'), 1800, frame);
+    scrubOnScroll(document.querySelector('.gallery'), frame);
   } else {
     ScrollTrigger.create({
       trigger: '.gallery', start: 'top top', end: '+=100%',
