@@ -1371,6 +1371,11 @@ document.querySelectorAll('[data-roll]').forEach(el => {
 
 /* ================= Scroll helpers (no libraries) ================= */
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+/* Viewport size can read 0 while a page is initialising or offscreen. Every
+   scroll calculation multiplies by it, so fall back rather than silently
+   failing every threshold. */
+const vh = () => innerHeight || document.documentElement.clientHeight || 800;
+const vw = () => innerWidth || document.documentElement.clientWidth || 1200;
 const listeners = [];
 let ticking = false;
 function onScroll(fn) { listeners.push(fn); fn(); }
@@ -1384,8 +1389,8 @@ addEventListener('orientationchange', () => setTimeout(request, 250));
 function scrubOnScroll(el, onFrame) {
   onScroll(() => {
     const r = el.getBoundingClientRect();
-    const span = innerHeight * 0.9 || 1;
-    onFrame(Math.max(0, Math.min(1, (innerHeight - r.top) / span)));
+    const span = vh() * 0.9 || 1;
+    onFrame(Math.max(0, Math.min(1, (vh() - r.top) / span)));
   });
 }
 /* Adds .in once an element scrolls into view. CSS does the animating. */
@@ -1397,7 +1402,7 @@ function revealOnScroll(selector, stagger) {
   onScroll(() => {
     els.forEach(el => {
       if (el.classList.contains('in')) return;
-      if (el.getBoundingClientRect().top < innerHeight * 0.86) el.classList.add('in');
+      if (el.getBoundingClientRect().top < vh() * 0.86) el.classList.add('in');
     });
   });
 }
@@ -1457,7 +1462,7 @@ scrollTo(0, 0);
         dots.push({ x, y, p: Math.random() * Math.PI * 2, r: Math.random() < .02 });
   }
   size(); addEventListener('resize', size);
-  addEventListener('mousemove', e => { mx = e.clientX / innerWidth; my = e.clientY / innerHeight; });
+  addEventListener('mousemove', e => { mx = e.clientX / vw(); my = e.clientY / vh(); });
   let t = 0;
   function draw() {
     t += .012;
@@ -1548,7 +1553,7 @@ scrollTo(0, 0);
       const t = Math.max(0, Math.min(1, (p - i * 0.035) / 0.68));
       const e = easeOut(t);
       const angle = (i / N) * Math.PI * 2 - Math.PI / 2;
-      const radius = Math.min(innerWidth, innerHeight) * (.30 + p * .10);
+      const radius = Math.min(vw(), vh()) * (.30 + p * .10);
       const x = Math.cos(angle) * radius * 1.35 * e;
       const y = Math.sin(angle) * radius * e + (1 - e) * 26;
       card.style.transform = `translate(${x}px, ${y}px) scale(${.9 + e * .1})`;
@@ -1698,7 +1703,7 @@ document.querySelectorAll('.cert-card').forEach(card => {
   const links = [...document.querySelectorAll('.tn-links a[href^="#"]')];
   if (!nav || !bar) return;
   onScroll(() => {
-    const max = document.documentElement.scrollHeight - innerHeight;
+    const max = document.documentElement.scrollHeight - vh();
     const p = max > 0 ? Math.min(1, scrollY / max) : 0;
     bar.style.transform = `scaleX(${p})`;
     if (pct) pct.textContent = `(${Math.round(p * 100)})`;
@@ -1706,7 +1711,7 @@ document.querySelectorAll('.cert-card').forEach(card => {
     let active = '';
     links.forEach(a => {
       const sec = document.querySelector(a.getAttribute('href'));
-      if (sec && sec.getBoundingClientRect().top <= innerHeight * .35) active = a.getAttribute('href');
+      if (sec && sec.getBoundingClientRect().top <= vh() * .35) active = a.getAttribute('href');
     });
     links.forEach(a => a.classList.toggle('current', a.getAttribute('href') === active));
   });
@@ -1724,7 +1729,7 @@ document.querySelectorAll('.cert-card').forEach(card => {
     let started = false;
     onScroll(() => {
       if (started) return;
-      if (el.getBoundingClientRect().top > innerHeight * .92) return;
+      if (el.getBoundingClientRect().top > vh() * .92) return;
       started = true;
       const t0 = performance.now(), dur = 1000;
       const step = now => {
@@ -1746,7 +1751,7 @@ document.querySelectorAll('.cert-card').forEach(card => {
       '.hero-eyebrow, .hero-headline, .hero-name, .hero-school, .hero-tags, .hero-bar'
     ).forEach(el => {
       const r = el.getBoundingClientRect();
-      if (r.bottom > 0 && r.top < innerHeight * 0.95 && parseFloat(getComputedStyle(el).opacity) < 0.02) {
+      if (r.bottom > 0 && r.top < vh() * 0.95 && parseFloat(getComputedStyle(el).opacity) < 0.02) {
         el.classList.add('in');
         el.style.transition = 'none';   /* never rely on the transition we are rescuing */
         el.style.opacity = '1';
