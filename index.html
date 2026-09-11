@@ -106,19 +106,10 @@
   }
   .tn-links a:hover,.tn-links a:focus-visible{color:var(--fg)}
   .tn-links a.current{color:var(--accent)}
-  #recruiter-btn{
-    border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer;
-    font-family:var(--font-display);font-size:.7rem;font-weight:600;letter-spacing:.14em;
-    text-transform:uppercase;padding:9px 16px;border-radius:999px;white-space:nowrap;
-    transition:background .25s,color .25s;
-  }
-  #recruiter-btn:hover{background:rgba(109,158,255,.12)}
-  #recruiter-btn[aria-pressed="true"]{background:var(--accent);color:#0a0a0a}
   @media(max-width:700px){
     .tn-name{display:none}
     .tn-links{gap:13px}
     .tn-links a{font-size:.68rem;letter-spacing:.1em}
-    #recruiter-btn{font-size:.62rem;padding:8px 12px;letter-spacing:.1em}
   }
 
   /* ============ Hero ============ */
@@ -237,24 +228,6 @@
   .process-steps li.in::before{border-color:var(--accent)}
   .ps-num{display:block;font-family:var(--font-display);font-weight:700;font-size:.8rem;color:var(--accent);letter-spacing:.1em}
   .ps-label{display:block;font-family:var(--font-display);font-weight:600;font-size:clamp(1rem,1.7vw,1.3125rem);margin-top:5px}
-
-  /* ============ Recruiter View ============ */
-  .recruiter #statement,.recruiter #reveal-sec,.recruiter .gallery,.recruiter #process,
-  .recruiter #hero-canvas,.recruiter #blob,.recruiter #preview,.recruiter #cursor,
-  .recruiter .skill-tabs,.recruiter #scroll-pct{display:none!important}
-  .recruiter .hero{height:auto;min-height:0;padding:89px 4vw 34px}
-  .recruiter .hero-tags{margin:13px 0 21px}
-  .recruiter #topnav{transform:none}
-  .recruiter .skill-panel{display:block!important;margin-bottom:21px}
-  .recruiter .skill-panel::before{
-    content:attr(aria-label);display:block;font-family:var(--font-display);font-weight:600;
-    font-size:.95rem;color:var(--steel);margin-bottom:8px;
-  }
-  .recruiter .cert-body{max-height:none!important}
-  .recruiter .cert-toggle{display:none}
-  .recruiter section{padding-top:34px!important;padding-bottom:34px!important}
-  .recruiter .about{padding:34px 4vw!important}
-  .recruiter [data-reveal]{opacity:1!important;transform:none!important}
 
   /* ============ Work ============ */
   .work{padding:14vh 4vw 10vh;position:relative}
@@ -624,7 +597,6 @@
     <a href="cv.html" target="_blank" rel="noopener">Resume</a>
     <a href="#contact">Contact</a>
   </nav>
-  <button id="recruiter-btn" type="button" aria-pressed="false">Recruiter View</button>
 </header>
 
 <main id="main">
@@ -1323,8 +1295,29 @@ document.querySelectorAll('.g-card').forEach(c => {
 });
 
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+/* Touch devices get animations that never depend on pinning: iOS resizes the
+   viewport as its address bar hides, which breaks pinned ScrollTriggers. */
+const isTouch = matchMedia('(hover: none), (pointer: coarse)').matches;
+/* Plays an animation once, on entry, using plain rAF. No ScrollTrigger, no pin. */
+function playOnEnter(el, duration, onFrame) {
+  const run = () => {
+    const t0 = performance.now();
+    const step = now => {
+      const p = Math.min(1, (now - t0) / duration);
+      onFrame(p < 1 ? 1 - Math.pow(1 - p, 3) : 1);
+      if (p < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  };
+  if (!('IntersectionObserver' in window)) { onFrame(1); return; }
+  const io = new IntersectionObserver(es => {
+    es.forEach(e => { if (e.isIntersecting) { io.disconnect(); run(); } });
+  }, { threshold: .35 });
+  io.observe(el);
+}
 const finePointer = matchMedia('(hover:hover) and (pointer:fine)').matches;
 gsap.registerPlugin(ScrollTrigger);
+ScrollTrigger.config({ ignoreMobileResize: true });
 ScrollTrigger.clearScrollMemory && ScrollTrigger.clearScrollMemory();
 
 /* ================= Rolling-text links ================= */
@@ -1335,7 +1328,7 @@ document.querySelectorAll('[data-roll]').forEach(el => {
 
 /* ================= Lenis smooth scroll ================= */
 let lenis = null;
-if (!reduceMotion) {
+if (!reduceMotion && !isTouch) {
   lenis = new Lenis({ smoothWheel: true, lerp: 0.1 });
   lenis.on('scroll', ScrollTrigger.update);
   gsap.ticker.add(t => lenis.raf(t * 1000));
@@ -1466,20 +1459,23 @@ if (reduceMotion) {
     }
   }
   draw(); addEventListener('resize', draw);
-  if (!reduceMotion) {
-    ScrollTrigger.create({
-      trigger: '#reveal-sec', start: 'top top', end: '+=110%',
-      pin: '#reveal-stage', scrub: true,
-      onUpdate: self => {
-        progress = self.progress; draw();
-        gsap.set('#reveal-phrase', {
-          opacity: gsap.utils.clamp(0, 1, (self.progress - .6) / .25),
-          scale: .94 + .06 * gsap.utils.clamp(0, 1, (self.progress - .6) / .25)
-        });
-      }
-    });
+  const phrase = document.getElementById('reveal-phrase');
+  const frame = pr => {
+    progress = pr; draw();
+    const f = Math.max(0, Math.min(1, (pr - .55) / .3));
+    phrase.style.opacity = f;
+    phrase.style.transform = `translate(-50%,-50%) scale(${.94 + .06 * f})`;
+  };
+  if (reduceMotion) {
+    frame(1);
+  } else if (isTouch) {
+    playOnEnter(document.getElementById('reveal-sec'), 1600, frame);
   } else {
-    document.getElementById('reveal-phrase').style.opacity = 1;
+    ScrollTrigger.create({
+      trigger: '#reveal-sec', start: 'top top', end: '+=90%',
+      pin: '#reveal-stage', scrub: true,
+      onUpdate: self => frame(self.progress)
+    });
   }
 })();
 
@@ -1607,11 +1603,7 @@ addEventListener('keydown', e => { if (e.key === 'Escape' && detailOpen) closeDe
   const cards = gsap.utils.toArray('.g-card');
   if (reduceMotion) { cards.forEach(c => c.style.display = 'none'); return; }
   const N = cards.length;
-  ScrollTrigger.create({
-    trigger: '.gallery', start: 'top top', end: '+=140%',
-    pin: '.gallery-stage', scrub: true,
-    onUpdate: self => {
-      const p = self.progress;
+  const frame = p => {
       cards.forEach((card, i) => {
         const angle = (i / N) * Math.PI * 2 - Math.PI / 2 + p * Math.PI * .8;
         const radius = Math.min(innerWidth, innerHeight) * (.22 + p * .30);
@@ -1624,8 +1616,17 @@ addEventListener('keydown', e => { if (e.key === 'Escape' && detailOpen) closeDe
         });
       });
       gsap.set('#g-phrase', { opacity: gsap.utils.clamp(0, 1, (p - .25) / .3) });
-    }
-  });
+  };
+  if (isTouch) {
+    frame(0);
+    playOnEnter(document.querySelector('.gallery'), 1800, frame);
+  } else {
+    ScrollTrigger.create({
+      trigger: '.gallery', start: 'top top', end: '+=100%',
+      pin: '.gallery-stage', scrub: true,
+      onUpdate: self => frame(self.progress)
+    });
+  }
 })();
 
 /* ================= Skills tabs ================= */
@@ -1729,24 +1730,6 @@ ScrollTrigger.create({
     trigger: li, start: 'top 88%', once: true,
     onEnter: () => setTimeout(() => li.classList.add('in'), i * 110)
   }));
-})();
-
-/* ================= Recruiter View ================= */
-(() => {
-  const btn = document.getElementById('recruiter-btn');
-  if (!btn) return;
-  btn.addEventListener('click', () => {
-    const on = document.documentElement.classList.toggle('recruiter');
-    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-    document.querySelectorAll('.skill-panel').forEach(x => x.classList.toggle('active', on ? true : x.id === 'spanel-0'));
-    document.querySelectorAll('.cert-card').forEach(c => {
-      const b = c.querySelector('.cert-body');
-      if (b) b.style.maxHeight = on ? b.scrollHeight + 'px' : '0px';
-      c.classList.toggle('open', on);
-    });
-    if (typeof lenis !== 'undefined' && lenis) lenis.scrollTo(0, { immediate: true }); else scrollTo(0, 0);
-    if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh();
-  });
 })();
 
 document.documentElement.setAttribute('data-ready', '1');
