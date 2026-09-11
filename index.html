@@ -1569,6 +1569,7 @@ revealOnScroll('[data-reveal]');
 revealOnScroll('.stmt-line', 160);
 revealOnScroll('.proj-item', 60);
 revealOnScroll('.process-steps li', 110);
+revealOnScroll('.sec-title');
 
 /* ================= Project hover preview + cursor ================= */
 (() => {
@@ -1747,15 +1748,21 @@ document.querySelectorAll('.cert-card').forEach(card => {
   let t;
   const unstick = () => {
     document.querySelectorAll(
-      '[data-reveal], .stmt-line, .proj-item, .process-steps li,' +
+      '[data-reveal], .stmt-line, .proj-item, .process-steps li, .sec-title,' +
+      '.contact-title, .c-statement, .skills-text, .about-text,' +
       '.hero-eyebrow, .hero-headline, .hero-name, .hero-school, .hero-tags, .hero-bar'
     ).forEach(el => {
       const r = el.getBoundingClientRect();
-      if (r.bottom > 0 && r.top < vh() * 0.95 && parseFloat(getComputedStyle(el).opacity) < 0.02) {
+      if (r.bottom <= 0 || r.top > vh() * 0.95) return;
+      const cs = getComputedStyle(el);
+      const stuckFade = parseFloat(cs.opacity) < 0.02;
+      const stuckBlur = cs.filter && cs.filter !== 'none' && /blur\((?!0)/.test(cs.filter);
+      if (stuckFade || stuckBlur) {
         el.classList.add('in');
         el.style.transition = 'none';   /* never rely on the transition we are rescuing */
         el.style.opacity = '1';
         el.style.transform = 'none';
+        el.style.filter = 'none';
       }
     });
     const line = document.getElementById('hero-line');
