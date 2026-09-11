@@ -1763,6 +1763,19 @@ document.querySelectorAll('.cert-card').forEach(card => {
   };
   const schedule = () => { clearTimeout(t); t = setTimeout(unstick, 1500); };
   setTimeout(unstick, 4200);
+  /* The hero always sits at the top of the page, so it needs no geometry test:
+     if it has not appeared shortly after load, show it unconditionally. */
+  setTimeout(() => {
+    document.body.classList.add('entered');
+    document.querySelectorAll('.hero-eyebrow,.hero-headline,.hero-name,.hero-school,.hero-tags,.hero-bar')
+      .forEach(el => {
+        if (parseFloat(getComputedStyle(el).opacity) > 0.02) return;
+        el.style.transition = 'none';
+        el.style.opacity = '1';
+        el.style.transform = 'none';
+        el.style.filter = 'none';
+      });
+  }, 4600);
   addEventListener('scroll', schedule, { passive: true });
   addEventListener('load', schedule);
   schedule();
