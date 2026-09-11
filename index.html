@@ -1301,14 +1301,17 @@ const isTouch = matchMedia('(hover: none), (pointer: coarse)').matches;
 /* Drives an animation from raw scroll position: no pinning, no observers,
    no library. Scroll events fire on every device, so this cannot silently fail. */
 function scrubOnScroll(el, onFrame) {
-  const update = () => {
+  let ticking = false;
+  const apply = () => {
+    ticking = false;
     const r = el.getBoundingClientRect();
     const span = innerHeight * 0.9 || 1;
     onFrame(Math.max(0, Math.min(1, (innerHeight - r.top) / span)));
   };
-  addEventListener('scroll', update, { passive: true });
-  addEventListener('resize', update);
-  update();
+  const request = () => { if (!ticking) { ticking = true; requestAnimationFrame(apply); } };
+  addEventListener('scroll', request, { passive: true });
+  addEventListener('resize', request);
+  apply();
 }
 const finePointer = matchMedia('(hover:hover) and (pointer:fine)').matches;
 gsap.registerPlugin(ScrollTrigger);
