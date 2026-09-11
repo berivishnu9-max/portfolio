@@ -15,7 +15,6 @@
 <meta name="twitter:card" content="summary">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500&display=swap">
 <style>
   :root{
@@ -79,6 +78,57 @@
   .no-motion .cert-body{max-height:none!important}
   .no-motion .skill-panel{display:block!important}
   .no-motion .gallery-stage,.no-motion .reveal-stage{height:auto!important;padding:89px 0}
+
+  /* ============ Motion: CSS only, identical on every browser ============ */
+  @keyframes preIn{
+    0%  {opacity:0;transform:translateY(10px) scaleX(.86);letter-spacing:.015em}
+    65% {opacity:1;transform:none;letter-spacing:.105em}
+    100%{opacity:1;transform:none;letter-spacing:.13em}
+  }
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  @keyframes preOut{to{opacity:0;transform:translateY(-70px)}}
+  .pre-name{animation:preIn 2.2s cubic-bezier(.22,1,.36,1) .2s both}
+  .pre-caption{animation:fadeIn .7s ease 1.7s both}
+  #preloader{transition:transform .9s cubic-bezier(.77,0,.18,1)}
+  #preloader.out .pre-wrap{animation:preOut .7s cubic-bezier(.77,0,.18,1) both}
+  #preloader.out{transform:translateY(-100%);transition-delay:.35s}
+
+  /* Hero entrance, staggered by transition-delay */
+  .hero-eyebrow,.hero-headline,.hero-name,.hero-school,.hero-tags,.hero-bar{
+    opacity:0;transform:translateY(22px);
+    transition:opacity .7s ease,transform .7s cubic-bezier(.22,1,.36,1);
+  }
+  body.entered .hero-eyebrow,body.entered .hero-headline,body.entered .hero-name,
+  body.entered .hero-school,body.entered .hero-tags,body.entered .hero-bar{opacity:1;transform:none}
+  body.entered .hero-headline{transition-delay:.08s}
+  body.entered .hero-name{transition-delay:.16s}
+  body.entered .hero-school{transition-delay:.20s}
+  body.entered .hero-tags{transition-delay:.26s}
+  body.entered .hero-bar{transition-delay:.32s}
+  .hero-line{transition:transform .9s cubic-bezier(.77,0,.18,1) .3s}
+  body.entered .hero-line{transform:scaleX(1)}
+
+  /* Scroll reveals */
+  [data-reveal],.stmt-line,.proj-item{
+    opacity:0;transform:translateY(34px);
+    transition:opacity .7s ease,transform .7s cubic-bezier(.22,1,.36,1);
+  }
+  [data-reveal].in,.stmt-line.in,.proj-item.in{opacity:1;transform:none}
+
+  /* Overlay and hover chrome */
+  #detail{transition:transform .55s cubic-bezier(.77,0,.18,1)}
+  body.locked{overflow:hidden}
+  #preview,#cursor{transition:opacity .3s ease,transform .12s linear}
+  #preview.show,#cursor.show{opacity:1}
+  #cursor{transform-origin:50% 50%}
+  @media(prefers-reduced-motion:reduce){
+    .pre-name,.pre-caption{animation:none!important;opacity:1!important}
+    [data-reveal],.stmt-line,.proj-item,.process-steps li,
+    .hero-eyebrow,.hero-headline,.hero-name,.hero-school,.hero-tags,.hero-bar{
+      opacity:1!important;transform:none!important;transition:none!important;
+    }
+    .hero-line{transform:scaleX(1)!important}
+  }
 
   /* ============ Sticky header + scroll progress ============ */
   #progress{
@@ -264,8 +314,7 @@
   .proj-item:active .proj-name{transform:translateX(10px) scale(.995)}
   /* hover preview card */
   #preview{
-    position:fixed;z-index:40;width:330px;pointer-events:none;
-    opacity:0;transform:scale(.92);
+    position:fixed;top:0;left:0;z-index:40;width:330px;pointer-events:none;opacity:0;
   }
   #preview .p-meta{display:flex;justify-content:space-between;margin-bottom:8px}
   .cover{
@@ -295,7 +344,7 @@
   .d-figcap span:first-child{color:var(--accent)}
   .d-illus>svg{position:absolute;inset:0;width:100%;height:100%}
   #cursor{
-    position:fixed;z-index:41;pointer-events:none;
+    position:fixed;top:0;left:0;z-index:41;pointer-events:none;
     background:var(--accent);color:#0a0a0a;
     font-size:.72rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
     padding:10px 16px;border-radius:999px;white-space:nowrap;
@@ -1033,9 +1082,6 @@
     <div id="scroll-pct">(0)</div>
 <div id="st-label">Beri Vishnu Vardhan Reddy · Portfolio</div>
 
-<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.14/dist/lenis.min.js"></script>
 <script>
 /* ================= Data ================= */
 const PROJECTS = {
@@ -1294,29 +1340,6 @@ document.querySelectorAll('.g-card').forEach(c => {
   c.innerHTML = `<div class="cover">${PROJECTS[c.dataset.id].svg}</div>`;
 });
 
-const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-/* Touch devices get animations that never depend on pinning: iOS resizes the
-   viewport as its address bar hides, which breaks pinned ScrollTriggers. */
-const isTouch = matchMedia('(hover: none), (pointer: coarse)').matches;
-/* Drives an animation from raw scroll position: no pinning, no observers,
-   no library. Scroll events fire on every device, so this cannot silently fail. */
-function scrubOnScroll(el, onFrame) {
-  let ticking = false;
-  const apply = () => {
-    ticking = false;
-    const r = el.getBoundingClientRect();
-    const span = innerHeight * 0.9 || 1;
-    onFrame(Math.max(0, Math.min(1, (innerHeight - r.top) / span)));
-  };
-  const request = () => { if (!ticking) { ticking = true; requestAnimationFrame(apply); } };
-  addEventListener('scroll', request, { passive: true });
-  addEventListener('resize', request);
-  apply();
-}
-const finePointer = matchMedia('(hover:hover) and (pointer:fine)').matches;
-gsap.registerPlugin(ScrollTrigger);
-ScrollTrigger.config({ ignoreMobileResize: true });
-ScrollTrigger.clearScrollMemory && ScrollTrigger.clearScrollMemory();
 
 /* ================= Rolling-text links ================= */
 document.querySelectorAll('[data-roll]').forEach(el => {
@@ -1324,78 +1347,97 @@ document.querySelectorAll('[data-roll]').forEach(el => {
   el.innerHTML = `<span class="roll"><i>${t}</i><i>${t}</i></span>`;
 });
 
-/* ================= Lenis smooth scroll ================= */
-let lenis = null;
-if (!reduceMotion && !isTouch) {
-  lenis = new Lenis({ smoothWheel: true, lerp: 0.1 });
-  lenis.on('scroll', ScrollTrigger.update);
-  gsap.ticker.add(t => lenis.raf(t * 1000));
-  gsap.ticker.lagSmoothing(0);
+/* ================= Scroll helpers (no libraries) ================= */
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const listeners = [];
+let ticking = false;
+function onScroll(fn) { listeners.push(fn); fn(); }
+function runAll() { ticking = false; for (const fn of listeners) fn(); }
+function request() { if (!ticking) { ticking = true; requestAnimationFrame(runAll); } }
+addEventListener('scroll', request, { passive: true });
+addEventListener('resize', request);
+addEventListener('orientationchange', () => setTimeout(request, 250));
+
+/* Progress of an element through the viewport, 0 to 1. */
+function scrubOnScroll(el, onFrame) {
+  onScroll(() => {
+    const r = el.getBoundingClientRect();
+    const span = innerHeight * 0.9 || 1;
+    onFrame(Math.max(0, Math.min(1, (innerHeight - r.top) / span)));
+  });
 }
+/* Adds .in once an element scrolls into view. CSS does the animating. */
+function revealOnScroll(selector, stagger) {
+  const els = [...document.querySelectorAll(selector)];
+  if (!els.length) return;
+  if (reduceMotion) { els.forEach(e => e.classList.add('in')); return; }
+  els.forEach((el, i) => { if (stagger) el.style.transitionDelay = (i * stagger) + 'ms'; });
+  onScroll(() => {
+    els.forEach(el => {
+      if (el.classList.contains('in')) return;
+      if (el.getBoundingClientRect().top < innerHeight * 0.9) el.classList.add('in');
+    });
+  });
+}
+
+/* ================= Anchor links ================= */
 document.querySelectorAll('a[href^="#"]').forEach(a => {
   a.addEventListener('click', e => {
     const target = document.querySelector(a.getAttribute('href'));
     if (!target) return;
     e.preventDefault();
-    lenis ? lenis.scrollTo(target, { offset: 0 }) : target.scrollIntoView();
+    target.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
   });
 });
 
-/* ================= Always enter from the top on load or refresh ================= */
+/* ================= Always enter from the top ================= */
 if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
-function resetToTop() {
-  scrollTo(0, 0);
-  if (lenis) lenis.scrollTo(0, { immediate: true });
-  ScrollTrigger.refresh(true);
-}
-addEventListener('beforeunload', resetToTop);
-addEventListener('pageshow', e => { e.persisted ? location.reload() : resetToTop(); });
-resetToTop();
+addEventListener('beforeunload', () => scrollTo(0, 0));
+scrollTo(0, 0);
 
-/* ================= Intro sequence ================= */
-const pre = document.getElementById('preloader');
-if (reduceMotion) {
-  pre.remove();
-} else {
-  const tl = gsap.timeline();
-  tl.to('#pre-name', {
-      opacity: 1, scaleX: 1, y: 0, letterSpacing: '0.105em',
-      duration: 1.25, ease: 'power3.out', delay: .2
-    })
-    .to('#pre-name', { letterSpacing: '0.13em', duration: .65, ease: 'power1.inOut' }, '+=.1')
-    .to('#pre-caption', { opacity: 1, duration: .55, ease: 'power2.out' }, '<')
-    .to('#pre-wrap', { y: -82, opacity: 0, duration: .75, ease: 'power4.inOut' }, '+=.8')
-    .to(pre, { yPercent: -100, duration: .8, ease: 'power4.inOut' }, '-=.35')
-    .set(pre, { display: 'none' })
-    .from('#hero-eyebrow', { y: 20, opacity: 0, duration: .55, ease: 'power3.out' }, '-=.45')
-    .from('#hero-headline', { y: 70, opacity: 0, duration: .8, ease: 'power3.out' }, '-=.4')
-    .from('.hero-name, .hero-school, #hero-tags', { y: 24, opacity: 0, duration: .55, stagger: .09, ease: 'power3.out' }, '-=.5')
-    .to('#hero-line', { scaleX: 1, duration: .7, ease: 'power3.inOut' }, '-=.45')
-    .from('#hero-bar > *', { y: 20, opacity: 0, duration: .5, stagger: .06, ease: 'power3.out' }, '-=.5');
-  const skipIntro = () => { if (tl.progress() < 1) tl.progress(1); };
-  pre.addEventListener('click', skipIntro);
-  addEventListener('keydown', function onIntroKey(e) {
-    if (e.key === 'Escape' || e.key === 'Enter') { skipIntro(); removeEventListener('keydown', onIntroKey); }
-  });
-}
-
-/* ================= Hero canvas , drifting dot grid ================= */
+/* ================= Intro sequence (CSS driven) ================= */
 (() => {
-  const cv = document.getElementById('hero-canvas'), cx = cv.getContext('2d');
-  let w, h, dots = [], mx = .5, my = .5;
+  const pre = document.getElementById('preloader');
+  if (!pre) return;
+  const enter = () => {
+    document.body.classList.add('entered');
+    request();
+  };
+  if (reduceMotion) { pre.remove(); enter(); return; }
+  let done = false;
+  const finish = () => {
+    if (done) return;
+    done = true;
+    pre.classList.add('out');
+    enter();
+    setTimeout(() => pre.remove(), 1200);
+  };
+  const hold = setTimeout(finish, 3100);
+  pre.addEventListener('click', () => { clearTimeout(hold); finish(); });
+  addEventListener('keydown', function onKey(e) {
+    if (e.key === 'Escape' || e.key === 'Enter') { clearTimeout(hold); finish(); removeEventListener('keydown', onKey); }
+  });
+})();
+
+/* ================= Hero canvas: drifting dot grid ================= */
+(() => {
+  const cv = document.getElementById('hero-canvas');
+  if (!cv) return;
+  const cx = cv.getContext('2d');
+  let w, h, dots = [], mx = .5, my = .5, raf = 0;
   function size() {
     w = cv.width = cv.offsetWidth * devicePixelRatio;
     h = cv.height = cv.offsetHeight * devicePixelRatio;
     dots = [];
     const gap = 52 * devicePixelRatio;
-    for (let x = gap/2; x < w; x += gap)
-      for (let y = gap/2; y < h; y += gap)
+    for (let x = gap / 2; x < w; x += gap)
+      for (let y = gap / 2; y < h; y += gap)
         dots.push({ x, y, p: Math.random() * Math.PI * 2, r: Math.random() < .02 });
   }
   size(); addEventListener('resize', size);
   addEventListener('mousemove', e => { mx = e.clientX / innerWidth; my = e.clientY / innerHeight; });
   let t = 0;
-  (function draw() {
+  function draw() {
     t += .012;
     cx.clearRect(0, 0, w, h);
     for (const d of dots) {
@@ -1407,29 +1449,30 @@ if (reduceMotion) {
       cx.arc(d.x + ox, d.y + oy, (d.r ? 2.2 : 1.4) * devicePixelRatio, 0, 7);
       cx.fill();
     }
-    if (!reduceMotion) requestAnimationFrame(draw);
-  })();
+    raf = requestAnimationFrame(draw);
+  }
+  if (reduceMotion) { draw(); cancelAnimationFrame(raf); } else draw();
+  document.addEventListener('visibilitychange', () => {
+    cancelAnimationFrame(raf);
+    if (!document.hidden && !reduceMotion) draw();
+  });
 })();
-
 
 /* ================= Signal reveal: scatter resolves to a fitted trend ================= */
 (() => {
-  const cv = document.getElementById('fit-canvas'), cx = cv.getContext('2d');
+  const cv = document.getElementById('fit-canvas');
+  if (!cv) return;
+  const cx = cv.getContext('2d');
   const N = 70, pts = [];
   let seed = 7;
   const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   for (let i = 0; i < N; i++) {
     const t = i / (N - 1);
-    pts.push({
-      cx: .04 + rand() * .92, cy: .05 + rand() * .8,
-      tx: .07 + t * .86,
-      res: (rand() - .5) * .14,
-      th: rand() * .55
-    });
+    pts.push({ cx: .04 + rand() * .92, cy: .05 + rand() * .8, tx: .07 + t * .86, res: (rand() - .5) * .14, th: rand() * .55 });
   }
   const lineY = x => .74 - x * .46;
-  let progress = reduceMotion ? 1 : 0;
   const ease = t => t < 0 ? 0 : t > 1 ? 1 : t * t * (3 - 2 * t);
+  let progress = 0;
   function draw() {
     const w = cv.width = cv.offsetWidth * devicePixelRatio;
     const h = cv.height = cv.offsetHeight * devicePixelRatio;
@@ -1456,7 +1499,6 @@ if (reduceMotion) {
       cx.stroke();
     }
   }
-  draw(); addEventListener('resize', draw);
   const phrase = document.getElementById('reveal-phrase');
   const frame = pr => {
     progress = pr; draw();
@@ -1464,76 +1506,82 @@ if (reduceMotion) {
     phrase.style.opacity = f;
     phrase.style.transform = `translate(-50%,-50%) scale(${.94 + .06 * f})`;
   };
+  addEventListener('resize', () => frame(progress));
   if (reduceMotion) frame(1);
   else scrubOnScroll(document.getElementById('reveal-sec'), frame);
 })();
 
-/* ================= Generic reveals ================= */
-if (!reduceMotion) {
-  document.querySelectorAll('[data-reveal]').forEach(el => {
-    gsap.from(el, {
-      y: 40, opacity: 0, duration: .8, ease: 'power3.out',
-      scrollTrigger: { trigger: el, start: 'top 86%' }
+/* ================= Gallery fan-out ================= */
+(() => {
+  const cards = [...document.querySelectorAll('.g-card')];
+  if (!cards.length) return;
+  if (reduceMotion) { cards.forEach(c => c.style.display = 'none'); return; }
+  const N = cards.length;
+  const phrase = document.getElementById('g-phrase');
+  const frame = p => {
+    cards.forEach((card, i) => {
+      const angle = (i / N) * Math.PI * 2 - Math.PI / 2 + p * Math.PI * .8;
+      const radius = Math.min(innerWidth, innerHeight) * (.22 + p * .30);
+      card.style.transform =
+        `translate(${Math.cos(angle) * radius * 1.35}px, ${Math.sin(angle) * radius}px) ` +
+        `rotate(${(i % 2 ? 6 : -6) * (1 - p)}deg) scale(${.55 + p * .5})`;
+      card.style.opacity = p < .06 ? p / .06 : 1;
     });
-  });
-  gsap.fromTo('.stmt-line',
-    { y: 54, opacity: 0 },
-    {
-      y: 0, opacity: 1, duration: .82, stagger: .17, ease: 'power3.out',
-      scrollTrigger: { trigger: '#statement', start: 'top 74%', once: true }
-    }
-  );
-  gsap.from('.proj-item', {
-    y: 48, opacity: 0, duration: .65, stagger: .06, ease: 'power3.out',
-    scrollTrigger: { trigger: '#proj-list', start: 'top 80%' }
-  });
-}
+    if (phrase) phrase.style.opacity = Math.max(0, Math.min(1, (p - .25) / .3));
+  };
+  scrubOnScroll(document.querySelector('.gallery'), frame);
+})();
+
+/* ================= Scroll reveals ================= */
+revealOnScroll('[data-reveal]');
+revealOnScroll('.stmt-line', 160);
+revealOnScroll('.proj-item', 60);
+revealOnScroll('.process-steps li', 110);
 
 /* ================= Project hover preview + cursor ================= */
-const preview = document.getElementById('preview');
-const cursor = document.getElementById('cursor');
-const pCover = document.getElementById('p-cover');
-if (finePointer && !reduceMotion) {
-  const pX = gsap.quickTo(preview, 'x', { duration: .45, ease: 'power3' });
-  const pY = gsap.quickTo(preview, 'y', { duration: .45, ease: 'power3' });
-  const cX = gsap.quickTo(cursor, 'x', { duration: .2, ease: 'power3' });
-  const cY = gsap.quickTo(cursor, 'y', { duration: .2, ease: 'power3' });
+(() => {
+  const preview = document.getElementById('preview');
+  const cursor = document.getElementById('cursor');
+  const pCover = document.getElementById('p-cover');
+  if (!preview || !cursor || !pCover) return;
+  const fine = matchMedia('(hover: hover) and (pointer: fine)').matches;
+  if (!fine || reduceMotion) return;
   addEventListener('mousemove', e => {
-    pX(e.clientX - 360); pY(e.clientY - 110);
-    cX(e.clientX); cY(e.clientY);
+    preview.style.transform = `translate(${e.clientX - 360}px, ${e.clientY - 110}px)`;
+    cursor.style.transform = `translate(${e.clientX}px, ${e.clientY}px) translate(-50%,-50%)`;
   });
   document.querySelectorAll('.proj-item').forEach(item => {
     item.addEventListener('mouseenter', () => {
       const p = PROJECTS[item.dataset.id];
       pCover.className = 'cover' + (p.red ? ' c-red' : '');
       pCover.innerHTML = p.svg;
-      gsap.to(preview, { opacity: 1, scale: 1, duration: .35, ease: 'power3.out' });
-      gsap.to(cursor, { opacity: 1, scale: 1, duration: .25 });
+      preview.classList.add('show');
+      cursor.classList.add('show');
     });
     item.addEventListener('mouseleave', () => {
-      gsap.to(preview, { opacity: 0, scale: .92, duration: .3 });
-      gsap.to(cursor, { opacity: 0, scale: .6, duration: .2 });
+      preview.classList.remove('show');
+      cursor.classList.remove('show');
     });
   });
-}
+})();
 
-/* ================= Detail overlay ================= */
-/* Case facts shown in the header strip */
+
+/* ================= Case study overlay ================= */
 const META = {
-  vfx:      { sub: "Process mapping and capacity optimisation",  setting: "Glasgow VFX studio (live client brief)",  team: "Team of 6",  deliverable: "Analyst report and forms-validated workbook",  fig: "Tracking dashboard" },
-  erm:      { sub: "Enterprise Risk Management & governance",    setting: "WB Alloys, £25m manufacturing group",       team: "Team of 5",  deliverable: "Board report, register prototype, presentation",  fig: "Risk heat map" },
-  census:   { sub: "Public sector demographic modelling",         setting: "Office for National Statistics scenario",   team: "Team of 5",  deliverable: "Consulting report and prioritized targeting model",fig: "Response correlation" },
-  lca:      { sub: "Supply chain carbon accounting",             setting: "Consumer packaging lifecycle analysis",     team: "Team of 7",  deliverable: "ISO-aligned lifecycle carbon assessment",         fig: "Cradle-to-gate system" },
-  soda:     { sub: "Multi-criteria decision support",            setting: "Stakeholder alignment and resource allocation",team: "Team of 5",  deliverable: "SODA & MCDA evaluation framework",                fig: "Aggregated cognitive map" },
-  forecast: { sub: "Inventory analytics & demand planning",      setting: "MAD Ltd, 600-product range",                team: "Individual", deliverable: "Automated Holt-Winters forecasting engine",   fig: "Holt-Winters forecast" }
+  vfx:      { sub: "Operations and workflow optimisation",  setting: "Glasgow VFX studio, live production data",  team: "Team of 6",  deliverable: "Analyst report and 9-tab workbook redesign",      fig: "Tracking dashboard" },
+  erm:      { sub: "Board-level risk governance",           setting: "WB Alloys, £25m manufacturing group",       team: "Team of 5",  deliverable: "Board report, register prototype, presentation",  fig: "Risk heat map" },
+  census:   { sub: "Public-sector consulting case",         setting: "Office for National Statistics scenario",   team: "Team of 5",  deliverable: "Consulting report and prioritisation model",      fig: "Response correlation" },
+  lca:      { sub: "Sustainability and environmental analysis", setting: "Consumer packaging, cradle to gate",    team: "Team of 7",  deliverable: "ISO-aligned LCA study in OpenLCA",                fig: "Cradle-to-gate system" },
+  soda:     { sub: "Stakeholder and decision analysis",     setting: "UK higher education",                       team: "Team of 5",  deliverable: "SODA and MCDA decision report",                   fig: "Aggregated cognitive map" },
+  forecast: { sub: "Commercial analytics",                  setting: "MAD Ltd, 600-product case business",        team: "Individual", deliverable: "Excel and VBA forecasting model with user guide", fig: "Holt-Winters forecast" }
 };
 const ORDER = ['vfx', 'erm', 'census', 'lca', 'soda', 'forecast'];
 
 const detail = document.getElementById('detail');
 const pageMain = document.getElementById('main');
-let lastOpener = null;
 const dNext = document.getElementById('d-next');
-let detailOpen = false;
+let lastOpener = null, detailOpen = false;
+
 function openDetail(id) {
   const p = PROJECTS[id], m = META[id];
   const wasOpen = detailOpen;
@@ -1544,41 +1592,34 @@ function openDetail(id) {
     [["Year", p.year], ["Setting", m.setting], ["Team", m.team], ["Deliverable", m.deliverable]]
       .map(([l, v]) => `<div><span class="micro">${l}</span><b>${v}</b></div>`).join('');
   document.getElementById('d-body').innerHTML =
-    (DETAILS[id] || [])
-      .map(([h, t]) => `<span class="d-sec-h">${h}</span>` + (t.startsWith('<ul') ? t : `<p>${t}</p>`)).join('');
+    (DETAILS[id] || []).map(([h, t]) => `<span class="d-sec-h">${h}</span>` + (t.startsWith('<ul') ? t : `<p>${t}</p>`)).join('');
   document.getElementById('d-illus').innerHTML = (p.svg || '') +
     '<span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span>' +
     `<div class="d-figcap"><span>Fig ${String(ORDER.indexOf(id) + 1).padStart(2, '0')}</span><span>${m.fig}</span></div>`;
   document.getElementById('d-metrics').innerHTML =
-    p.metrics.map(([b, s]) => `<div><b>${b}</b><span>${s}</span></div>`).join('');
-  document.getElementById('d-tags').innerHTML =
-    p.tags.map(t => `<span>${t}</span>`).join('');
+    p.metrics.map(([b, sp]) => `<div><b>${b}</b><span>${sp}</span></div>`).join('');
+  document.getElementById('d-tags').innerHTML = p.tags.map(t => `<span>${t}</span>`).join('');
   const next = ORDER[(ORDER.indexOf(id) + 1) % ORDER.length];
   dNext.dataset.id = next;
   document.getElementById('d-next-title').textContent = PROJECTS[next].title;
   detail.scrollTop = 0;
   detailOpen = true;
-  lenis && lenis.stop();
   if (!wasOpen) lastOpener = document.activeElement;
+  document.body.classList.add('locked');
   detail.removeAttribute('inert');
   detail.removeAttribute('aria-hidden');
   pageMain && pageMain.setAttribute('inert', '');
+  detail.classList.add('open');
   detail.focus({ preventScroll: true });
-  gsap.to(detail, { y: 0, duration: reduceMotion ? 0 : .7, ease: 'power4.inOut', onComplete: () => detail.classList.add('open') });
-  if (!reduceMotion) gsap.from('#detail .d-head > *, #d-body > *, #d-illus, .d-metrics div, .d-tags span, #d-next', {
-    y: 18, opacity: 0, duration: .42, stagger: .025, ease: 'power2.out', delay: wasOpen ? .05 : .35
-  });
-  gsap.to(cursor, { opacity: 0, duration: .2 });
 }
 function closeDetail() {
   detailOpen = false;
   detail.classList.remove('open');
-  lenis && lenis.start();
   detail.setAttribute('inert', '');
   detail.setAttribute('aria-hidden', 'true');
   pageMain && pageMain.removeAttribute('inert');
+  document.body.classList.remove('locked');
   if (lastOpener && typeof lastOpener.focus === 'function') lastOpener.focus({ preventScroll: true });
-  gsap.to(detail, { y: '101%', duration: reduceMotion ? 0 : .6, ease: 'power4.inOut' });
 }
 document.querySelectorAll('.proj-item').forEach(i =>
   i.addEventListener('click', () => openDetail(i.dataset.id)));
@@ -1586,28 +1627,6 @@ dNext.addEventListener('click', () => openDetail(dNext.dataset.id));
 dNext.addEventListener('keydown', e => { if (e.key === 'Enter') openDetail(dNext.dataset.id); });
 document.getElementById('d-back').addEventListener('click', closeDetail);
 addEventListener('keydown', e => { if (e.key === 'Escape' && detailOpen) closeDetail(); });
-
-/* ================= Gallery fan-out ================= */
-(() => {
-  const cards = gsap.utils.toArray('.g-card');
-  if (reduceMotion) { cards.forEach(c => c.style.display = 'none'); return; }
-  const N = cards.length;
-  const frame = p => {
-      cards.forEach((card, i) => {
-        const angle = (i / N) * Math.PI * 2 - Math.PI / 2 + p * Math.PI * .8;
-        const radius = Math.min(innerWidth, innerHeight) * (.22 + p * .30);
-        gsap.set(card, {
-          x: Math.cos(angle) * radius * 1.35,
-          y: Math.sin(angle) * radius,
-          rotation: (i % 2 ? 6 : -6) * (1 - p),
-          scale: .55 + p * .5,
-          opacity: p < .06 ? p / .06 : 1
-        });
-      });
-      gsap.set('#g-phrase', { opacity: gsap.utils.clamp(0, 1, (p - .25) / .3) });
-  };
-  scrubOnScroll(document.querySelector('.gallery'), frame);
-})();
 
 /* ================= Skills tabs ================= */
 (() => {
@@ -1632,9 +1651,7 @@ addEventListener('keydown', e => { if (e.key === 'Escape' && detailOpen) closeDe
   });
 })();
 
-
-
-/* ================= Certificate cards expand ================= */
+/* ================= Certificate cards ================= */
 document.querySelectorAll('.cert-card').forEach(card => {
   const body = card.querySelector('.cert-body');
   if (!body) return;
@@ -1645,23 +1662,19 @@ document.querySelectorAll('.cert-card').forEach(card => {
   });
 });
 
-/* ================= Scroll percentage ================= */
-const pct = document.getElementById('scroll-pct');
-ScrollTrigger.create({
-  trigger: document.body, start: 'top top', end: 'bottom bottom',
-  onUpdate: self => pct.textContent = `(${Math.round(self.progress * 100)})`
-});
-
-/* ================= Sticky header, progress bar, section highlighting ================= */
+/* ================= Sticky header, progress bar, section highlight ================= */
 (() => {
   const nav = document.getElementById('topnav');
   const bar = document.getElementById('progress');
-  const links = [...document.querySelectorAll('.tn-links a[href^="#"]')];
+  const pct = document.getElementById('scroll-pct');
   const hero = document.getElementById('top');
-  const setProgress = p => bar.style.transform = `scaleX(${p})`;
-  const update = () => {
+  const links = [...document.querySelectorAll('.tn-links a[href^="#"]')];
+  if (!nav || !bar) return;
+  onScroll(() => {
     const max = document.documentElement.scrollHeight - innerHeight;
-    setProgress(max > 0 ? Math.min(1, scrollY / max) : 0);
+    const p = max > 0 ? Math.min(1, scrollY / max) : 0;
+    bar.style.transform = `scaleX(${p})`;
+    if (pct) pct.textContent = `(${Math.round(p * 100)})`;
     nav.classList.toggle('show', scrollY > hero.offsetHeight * .7);
     let active = '';
     links.forEach(a => {
@@ -1669,60 +1682,42 @@ ScrollTrigger.create({
       if (sec && sec.getBoundingClientRect().top <= innerHeight * .35) active = a.getAttribute('href');
     });
     links.forEach(a => a.classList.toggle('current', a.getAttribute('href') === active));
-  };
-  addEventListener('scroll', update, { passive: true });
-  addEventListener('resize', update);
-  if (typeof lenis !== 'undefined' && lenis) lenis.on('scroll', update);
-  update();
+  });
 })();
 
 /* ================= Animated statistics ================= */
 (() => {
-  const nodes = [...document.querySelectorAll('.numbers-grid b')];
-  nodes.forEach(el => {
+  [...document.querySelectorAll('.numbers-grid b')].forEach(el => {
     const final = el.textContent;
     const m = final.match(/^(\D*)(\d[\d,]*)(.*)$/);
-    if (!m) return;
+    if (!m || reduceMotion) return;
     const [, pre, numStr, suf] = m;
     const target = parseInt(numStr.replace(/,/g, ''), 10);
     if (!isFinite(target)) return;
-    if (reduceMotion) return;
-    ScrollTrigger.create({
-      trigger: el, start: 'top 92%', once: true,
-      onEnter: () => {
-        const o = { v: 0 };
-        gsap.to(o, {
-          v: target, duration: 1.1, ease: 'power2.out',
-          onUpdate: () => { el.textContent = pre + Math.round(o.v) + suf; },
-          onComplete: () => { el.textContent = final; }
-        });
-      }
+    let started = false;
+    onScroll(() => {
+      if (started) return;
+      if (el.getBoundingClientRect().top > innerHeight * .92) return;
+      started = true;
+      const t0 = performance.now(), dur = 1000;
+      const step = now => {
+        const k = Math.min(1, (now - t0) / dur);
+        el.textContent = k < 1 ? pre + Math.round(target * (1 - Math.pow(1 - k, 3))) + suf : final;
+        if (k < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
     });
   });
 })();
 
-/* ================= How I think: stage reveal ================= */
-(() => {
-  const steps = [...document.querySelectorAll('.process-steps li')];
-  if (!steps.length) return;
-  if (reduceMotion) { steps.forEach(s => s.classList.add('in')); return; }
-  steps.forEach((li, i) => ScrollTrigger.create({
-    trigger: li, start: 'top 88%', once: true,
-    onEnter: () => setTimeout(() => li.classList.add('in'), i * 110)
-  }));
-})();
-
-/* ================= Safety net: never leave content invisible =================
-   If a scroll-driven reveal fails to fire on any device, force anything that has
-   been sitting in the viewport and is still transparent to become visible. */
+/* ================= Safety net: never leave content invisible ================= */
 (() => {
   let t;
   const unstick = () => {
-    document.querySelectorAll('[data-reveal]').forEach(el => {
+    document.querySelectorAll('[data-reveal], .stmt-line, .proj-item, .process-steps li').forEach(el => {
       const r = el.getBoundingClientRect();
-      const visible = r.bottom > 0 && r.top < innerHeight * 0.95;
-      if (visible && parseFloat(getComputedStyle(el).opacity) < 0.02) {
-        el.style.transition = 'opacity .5s ease, transform .5s ease';
+      if (r.bottom > 0 && r.top < innerHeight * 0.95 && parseFloat(getComputedStyle(el).opacity) < 0.02) {
+        el.classList.add('in');
         el.style.opacity = '1';
         el.style.transform = 'none';
       }
@@ -1738,13 +1733,16 @@ document.documentElement.setAttribute('data-ready', '1');
 </script>
 
 <script>
-/* Safety net: if the CDN libraries or the main script fail, reveal the page anyway
-   instead of leaving the visitor on the preloader. */
+/* If the main script fails for any reason, reveal the page rather than
+   leaving the visitor on the intro. */
 (function () {
   if (document.documentElement.hasAttribute('data-ready')) return;
   document.documentElement.classList.add('no-motion');
   var pre = document.getElementById('preloader');
   if (pre && pre.parentNode) pre.parentNode.removeChild(pre);
+  document.body.classList.add('entered');
+  document.querySelectorAll('[data-reveal], .stmt-line, .proj-item, .process-steps li')
+    .forEach(function (x) { x.classList.add('in'); });
   document.querySelectorAll('.cert-body').forEach(function (b) { b.style.maxHeight = 'none'; });
   document.querySelectorAll('.skill-panel').forEach(function (x) { x.classList.add('active'); });
 })();
