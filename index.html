@@ -1714,7 +1714,10 @@ document.querySelectorAll('.cert-card').forEach(card => {
 (() => {
   let t;
   const unstick = () => {
-    document.querySelectorAll('[data-reveal], .stmt-line, .proj-item, .process-steps li').forEach(el => {
+    document.querySelectorAll(
+      '[data-reveal], .stmt-line, .proj-item, .process-steps li,' +
+      '.hero-eyebrow, .hero-headline, .hero-name, .hero-school, .hero-tags, .hero-bar'
+    ).forEach(el => {
       const r = el.getBoundingClientRect();
       if (r.bottom > 0 && r.top < innerHeight * 0.95 && parseFloat(getComputedStyle(el).opacity) < 0.02) {
         el.classList.add('in');
@@ -1722,8 +1725,11 @@ document.querySelectorAll('.cert-card').forEach(card => {
         el.style.transform = 'none';
       }
     });
+    const line = document.getElementById('hero-line');
+    if (line && getComputedStyle(line).transform.indexOf('matrix(0') === 0) line.style.transform = 'scaleX(1)';
   };
   const schedule = () => { clearTimeout(t); t = setTimeout(unstick, 1500); };
+  setTimeout(unstick, 4200);
   addEventListener('scroll', schedule, { passive: true });
   addEventListener('load', schedule);
   schedule();
