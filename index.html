@@ -1721,12 +1721,13 @@ document.querySelectorAll('.cert-card').forEach(card => {
       const r = el.getBoundingClientRect();
       if (r.bottom > 0 && r.top < innerHeight * 0.95 && parseFloat(getComputedStyle(el).opacity) < 0.02) {
         el.classList.add('in');
+        el.style.transition = 'none';   /* never rely on the transition we are rescuing */
         el.style.opacity = '1';
         el.style.transform = 'none';
       }
     });
     const line = document.getElementById('hero-line');
-    if (line && getComputedStyle(line).transform.indexOf('matrix(0') === 0) line.style.transform = 'scaleX(1)';
+    if (line && getComputedStyle(line).transform.indexOf('matrix(0') === 0) { line.style.transition = 'none'; line.style.transform = 'scaleX(1)'; }
   };
   const schedule = () => { clearTimeout(t); t = setTimeout(unstick, 1500); };
   setTimeout(unstick, 4200);
