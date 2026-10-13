@@ -24,6 +24,34 @@ export default function BackgroundVideo() {
 
   const { src, poster } = wide ? SOURCES.wide : SOURCES.tall
 
+  // Load the whole clip into memory before using it. Seeking a streamed video
+  // depends on the server honouring HTTP Range requests; when it doesn't, the
+  // browser can't seek and the face stays frozen. A blob URL always seeks.
+  const [videoSrc, setVideoSrc] = useState<string>()
+
+  useEffect(() => {
+    let objectUrl: string | undefined
+    let cancelled = false
+    setVideoSrc(undefined)
+    fetch(src)
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        return res.blob()
+      })
+      .then((blob) => {
+        if (cancelled) return
+        objectUrl = URL.createObjectURL(blob)
+        setVideoSrc(objectUrl)
+      })
+      .catch(() => {
+        if (!cancelled) setVideoSrc(src)
+      })
+    return () => {
+      cancelled = true
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
+    }
+  }, [src])
+
   useEffect(() => {
     const video = videoRef.current
     if (!video) return
@@ -80,7 +108,7 @@ export default function BackgroundVideo() {
   return (
     <video
       ref={videoRef}
-      src={src}
+      src={videoSrc}
       poster={poster}
       muted
       playsInline
