@@ -1,11 +1,28 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
-const VIDEO_SRC =
-  'https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260826_041744_63efcd78-bf7d-4039-99e2-2461e8a61903.mp4'
+// Two crops of the same clip, padded with the backdrop red so the subject sits
+// clear of the text: on the right for wide screens, at the top for phones.
+// Both are encoded with a 3-frame keyframe interval so seeks land quickly.
+const base = import.meta.env.BASE_URL
+const SOURCES = {
+  wide: { src: `${base}hero-wide.mp4`, poster: `${base}hero-wide.jpg` },
+  tall: { src: `${base}hero-tall.mp4`, poster: `${base}hero-tall.jpg` },
+}
+const WIDE_QUERY = '(min-aspect-ratio: 1/1)'
 const SENSITIVITY = 0.8
 
 export default function BackgroundVideo() {
   const videoRef = useRef<HTMLVideoElement>(null)
+  const [wide, setWide] = useState(() => window.matchMedia(WIDE_QUERY).matches)
+
+  useEffect(() => {
+    const mq = window.matchMedia(WIDE_QUERY)
+    const onChange = () => setWide(mq.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
+
+  const { src, poster } = wide ? SOURCES.wide : SOURCES.tall
 
   useEffect(() => {
     const video = videoRef.current
@@ -42,6 +59,11 @@ export default function BackgroundVideo() {
       if (!seeking) seek()
     }
 
+    // A source swap (e.g. rotating a tablet) restarts the clip at 0.
+    const onLoaded = () => {
+      targetTime = video.currentTime
+    }
+
     const onMouseMove = (e: MouseEvent) => scrub(e.clientX)
     const onTouchMove = (e: TouchEvent) => scrub(e.touches[0].clientX)
     const onTouchEnd = () => {
@@ -49,11 +71,13 @@ export default function BackgroundVideo() {
     }
 
     video.addEventListener('seeked', onSeeked)
+    video.addEventListener('loadedmetadata', onLoaded)
     window.addEventListener('mousemove', onMouseMove)
     window.addEventListener('touchmove', onTouchMove, { passive: true })
     window.addEventListener('touchend', onTouchEnd)
     return () => {
       video.removeEventListener('seeked', onSeeked)
+      video.removeEventListener('loadedmetadata', onLoaded)
       window.removeEventListener('mousemove', onMouseMove)
       window.removeEventListener('touchmove', onTouchMove)
       window.removeEventListener('touchend', onTouchEnd)
@@ -63,14 +87,15 @@ export default function BackgroundVideo() {
   return (
     <video
       ref={videoRef}
-      src={VIDEO_SRC}
+      src={src}
+      poster={poster}
       muted
       playsInline
       preload="auto"
       aria-hidden="true"
       tabIndex={-1}
       className="fixed inset-0 z-0 h-full w-full object-cover"
-      style={{ objectPosition: '70% center' }}
+      style={{ objectPosition: wide ? '70% center' : '70% top' }}
     />
   )
 }

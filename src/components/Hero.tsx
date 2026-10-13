@@ -35,7 +35,7 @@ export default function Hero() {
   }
 
   return (
-    <main className="relative z-[1] flex h-screen flex-col justify-end overflow-hidden px-5 pb-12 sm:px-8 md:justify-center md:px-10 md:pb-0">
+    <main className="relative z-[1] flex h-screen flex-col justify-end overflow-hidden px-5 pb-12 sm:px-8 md:px-10 wide:justify-center wide:pb-0">
       <div className="relative z-10 max-w-xl">
         {/* Readable copy for screen readers and search engines; the blurred line is decorative. */}
         <h1 className="sr-only">
@@ -49,7 +49,7 @@ export default function Hero() {
             fontSize: 'clamp(18px, 4vw, 26px)',
             lineHeight: 1.3,
             fontWeight: 400,
-            color: '#fff',
+            color: '#000',
             filter: 'blur(4px)',
           }}
         >
@@ -60,7 +60,7 @@ export default function Hero() {
 
         <p
           aria-hidden="true"
-          className="mb-5 text-white sm:mb-6"
+          className="mb-5 text-black sm:mb-6"
           style={{
             fontSize: 'clamp(18px, 4vw, 26px)',
             lineHeight: 1.35,
@@ -70,7 +70,7 @@ export default function Hero() {
         >
           {displayed}
           {!done && (
-            <span className="animate-blink ml-[2px] inline-block h-[1.1em] w-[2px] bg-white align-middle" />
+            <span className="animate-blink ml-[2px] inline-block h-[1.1em] w-[2px] bg-black align-middle" />
           )}
         </p>
 
