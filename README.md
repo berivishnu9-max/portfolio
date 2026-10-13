@@ -6,12 +6,21 @@ Portfolio of business analysis and consulting case work, covering enterprise ris
 governance, process redesign, public-sector prioritisation, sustainability analysis,
 decision modelling and demand forecasting.
 
-- `index.html` — portfolio (case studies, skills, experience, certificates)
-- `cv.html` — CV, printable to PDF
-- `certs/` — certificate files
-- `me.jpg` — profile photo
+- `src/` — landing page (React, TypeScript, Vite, Tailwind CSS); copy and links live in `src/content.ts`
+- `public/work.html` — case studies, skills, experience, certificates
+- `public/cv.html` — CV, printable to PDF
+- `public/certs/` — certificate files
+- `public/me.jpg` — profile photo
 
-Built as a single static page: HTML, CSS and vanilla JavaScript, with GSAP and Lenis
-loaded from CDN. No build step required.
+## Develop
+
+```bash
+npm install
+npm run dev      # local dev server
+npm run build    # production build into dist/
+```
+
+Pushes to `main` build and deploy via `.github/workflows/deploy.yml`. In the repo's
+Settings → Pages, the source must be set to **GitHub Actions**.
 
 Contact: berivishnu9@gmail.com · https://www.linkedin.com/in/berivishnuvardhanreddy
