@@ -2,14 +2,13 @@ import { useEffect, useRef, useState } from 'react'
 
 // Two crops of the same clip, padded with the backdrop red so the subject sits
 // clear of the text: on the right for wide screens, at the top for phones.
-// Both are encoded with a 3-frame keyframe interval so seeks land quickly.
+// Both are encoded with a 2-frame keyframe interval so seeks land quickly.
 const base = import.meta.env.BASE_URL
 const SOURCES = {
   wide: { src: `${base}hero-wide.mp4`, poster: `${base}hero-wide.jpg` },
   tall: { src: `${base}hero-tall.mp4`, poster: `${base}hero-tall.jpg` },
 }
 const WIDE_QUERY = '(min-aspect-ratio: 1/1)'
-const SENSITIVITY = 0.8
 
 export default function BackgroundVideo() {
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -28,7 +27,6 @@ export default function BackgroundVideo() {
     const video = videoRef.current
     if (!video) return
 
-    let prevX: number | null = null
     let targetTime = 0
     let seeking = false
 
@@ -45,17 +43,13 @@ export default function BackgroundVideo() {
       if (Math.abs(video.currentTime - targetTime) > 0.001) seek()
     }
 
-    const scrub = (x: number) => {
-      if (prevX === null) {
-        prevX = x
-        return
-      }
-      const delta = x - prevX
-      prevX = x
+    // The clip turns from looking left to looking right, so pointer X maps
+    // straight onto time: the head follows the cursor across the screen.
+    const follow = (x: number) => {
       const duration = video.duration
       if (!duration || Number.isNaN(duration)) return
-      const offset = (delta / window.innerWidth) * SENSITIVITY * duration
-      targetTime = Math.min(Math.max(targetTime + offset, 0), duration)
+      const ratio = Math.min(Math.max(x / window.innerWidth, 0), 1)
+      targetTime = ratio * duration
       if (!seeking) seek()
     }
 
@@ -64,23 +58,20 @@ export default function BackgroundVideo() {
       targetTime = video.currentTime
     }
 
-    const onMouseMove = (e: MouseEvent) => scrub(e.clientX)
-    const onTouchMove = (e: TouchEvent) => scrub(e.touches[0].clientX)
-    const onTouchEnd = () => {
-      prevX = null
-    }
+    const onMouseMove = (e: MouseEvent) => follow(e.clientX)
+    const onTouchMove = (e: TouchEvent) => follow(e.touches[0].clientX)
 
     video.addEventListener('seeked', onSeeked)
     video.addEventListener('loadedmetadata', onLoaded)
     window.addEventListener('mousemove', onMouseMove)
     window.addEventListener('touchmove', onTouchMove, { passive: true })
-    window.addEventListener('touchend', onTouchEnd)
+    window.addEventListener('touchstart', onTouchMove, { passive: true })
     return () => {
       video.removeEventListener('seeked', onSeeked)
       video.removeEventListener('loadedmetadata', onLoaded)
       window.removeEventListener('mousemove', onMouseMove)
       window.removeEventListener('touchmove', onTouchMove)
-      window.removeEventListener('touchend', onTouchEnd)
+      window.removeEventListener('touchstart', onTouchMove)
     }
   }, [])
 
