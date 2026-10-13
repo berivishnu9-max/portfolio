@@ -2,14 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* --font-body and the page colours are defined by the portfolio styles in index.html. */
 :root {
   --font-heading: 'HelveticaNowDisplay-Medium', 'Helvetica Neue', Arial, sans-serif;
-  --font-body: 'HelveticaNowDisplayW01-Rg', 'Helvetica Neue', Arial, sans-serif;
-}
-
-body {
-  font-family: var(--font-body);
-  background: #e4011f; /* matches the video backdrop */
 }
 
 @keyframes blink {

@@ -6,11 +6,17 @@ Portfolio of business analysis and consulting case work, covering enterprise ris
 governance, process redesign, public-sector prioritisation, sustainability analysis,
 decision modelling and demand forecasting.
 
-- `src/` — landing page (React, TypeScript, Vite, Tailwind CSS); copy and links live in `src/content.ts`
-- `public/work.html` — case studies, skills, experience, certificates
+One continuous page: a full-screen hero whose portrait follows the cursor, then the
+case studies, skills, experience, certificates and contact sections below it.
+
+- `index.html` — the page: hand-written sections and styles, with the hero mounted at `#root`
+- `src/` — the hero (React, TypeScript, Vite, Tailwind CSS); copy and links live in `src/content.ts`
 - `public/cv.html` — CV, printable to PDF
-- `public/certs/` — certificate files
-- `public/me.jpg` — profile photo
+- `public/work.html` — redirect so old `work.html` links still land on the right section
+- `public/hero-*.mp4` — hero clip in wide and tall crops; backdrop keyed to the page colour with `tools/key-backdrop.py`
+- `public/certs/`, `public/me.jpg` — certificates and profile photo
+
+Palette: canvas `#FAF9F6`, charcoal `#2C302E`, gold `#D4AF37` for fills, deep gold `#8A6D1A` for gold text.
 
 ## Develop
 

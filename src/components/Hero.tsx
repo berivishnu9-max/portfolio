@@ -35,7 +35,7 @@ export default function Hero() {
   }
 
   return (
-    <main className="relative z-[1] flex h-screen flex-col justify-end overflow-hidden px-5 pb-12 sm:px-8 md:px-10 wide:justify-center wide:pb-0">
+    <div className="relative z-[1] flex h-screen flex-col justify-end overflow-hidden px-5 pb-12 sm:px-8 md:px-10 wide:justify-center wide:pb-0">
       <div className="relative z-10 max-w-xl">
         {/* Readable copy for screen readers and search engines; the blurred line is decorative. */}
         <h1 className="sr-only">
@@ -49,7 +49,7 @@ export default function Hero() {
             fontSize: 'clamp(18px, 4vw, 26px)',
             lineHeight: 1.3,
             fontWeight: 400,
-            color: '#000',
+            color: '#2C302E',
             filter: 'blur(4px)',
           }}
         >
@@ -60,7 +60,7 @@ export default function Hero() {
 
         <p
           aria-hidden="true"
-          className="mb-5 text-black sm:mb-6"
+          className="mb-5 mt-0 text-charcoal sm:mb-6"
           style={{
             fontSize: 'clamp(18px, 4vw, 26px)',
             lineHeight: 1.35,
@@ -70,7 +70,7 @@ export default function Hero() {
         >
           {displayed}
           {!done && (
-            <span className="animate-blink ml-[2px] inline-block h-[1.1em] w-[2px] bg-black align-middle" />
+            <span className="animate-blink ml-[2px] inline-block h-[1.1em] w-[2px] bg-charcoal align-middle" />
           )}
         </p>
 
@@ -87,7 +87,7 @@ export default function Hero() {
               key={action.label}
               href={action.href}
               {...(action.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
-              className={`${pill} border border-black/10 bg-white text-black hover:bg-black hover:text-white`}
+              className={`${pill} border border-solid border-charcoal/15 bg-white text-charcoal no-underline hover:bg-charcoal hover:text-canvas`}
             >
               {action.label}
             </a>
@@ -95,7 +95,7 @@ export default function Hero() {
           <button
             type="button"
             onClick={copyEmail}
-            className={`${pill} gap-2 border border-white bg-transparent text-white hover:bg-white hover:text-black sm:gap-3`}
+            className={`${pill} cursor-pointer gap-2 border border-solid border-gold bg-gold font-[inherit] text-charcoal hover:border-charcoal hover:bg-charcoal hover:text-canvas sm:gap-3`}
           >
             <span>
               {copied ? (
@@ -113,6 +113,6 @@ export default function Hero() {
           </span>
         </div>
       </div>
-    </main>
+    </div>
   )
 }

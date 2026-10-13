@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 
-// Two crops of the same clip, padded with the backdrop red so the subject sits
+// Two crops of the same clip (backdrop keyed to the page canvas by
+// tools/key-backdrop.py), padded with the canvas colour so the subject sits
 // clear of the text: on the right for wide screens, at the top for phones.
 // Both are encoded with a 2-frame keyframe interval so seeks land quickly.
 const base = import.meta.env.BASE_URL
@@ -46,6 +47,7 @@ export default function BackgroundVideo() {
     // The clip turns from looking left to looking right, so pointer X maps
     // straight onto time: the head follows the cursor across the screen.
     const follow = (x: number) => {
+      if (window.scrollY > window.innerHeight) return // hero scrolled away
       const duration = video.duration
       if (!duration || Number.isNaN(duration)) return
       const ratio = Math.min(Math.max(x / window.innerWidth, 0), 1)
@@ -85,7 +87,7 @@ export default function BackgroundVideo() {
       preload="auto"
       aria-hidden="true"
       tabIndex={-1}
-      className="fixed inset-0 z-0 h-full w-full object-cover"
+      className="absolute inset-0 z-0 h-full w-full object-cover"
       style={{ objectPosition: wide ? '70% center' : '70% top' }}
     />
   )

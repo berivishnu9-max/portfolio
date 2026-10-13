@@ -5,11 +5,13 @@ export const LINKEDIN = 'https://www.linkedin.com/in/berivishnuvardhanreddy'
 
 const base = import.meta.env.BASE_URL
 
-export const NAV_LINKS = [
-  { label: 'Work', href: `${base}work.html#work` },
+type Link = { label: string; href: string; external?: boolean }
+
+export const NAV_LINKS: Link[] = [
+  { label: 'Work', href: '#work' },
+  { label: 'About', href: '#about' },
   { label: 'CV', href: `${base}cv.html` },
-  { label: 'Certificates', href: `${base}work.html#certificates` },
-  { label: 'LinkedIn', href: LINKEDIN, external: true },
+  { label: 'Certificates', href: '#certificates' },
 ]
 
 export const INTRO = [
@@ -20,9 +22,9 @@ export const INTRO = [
 export const TYPED =
   'Four years running a 72-bed property taught me to turn messy operations into clear decisions. Now, what are we solving?'
 
-export const ACTIONS = [
-  { label: 'See my case studies', href: `${base}work.html#work` },
+export const ACTIONS: Link[] = [
+  { label: 'See my case studies', href: '#work' },
   { label: 'Read my CV', href: `${base}cv.html` },
-  { label: 'View certificates', href: `${base}work.html#certificates` },
+  { label: 'View certificates', href: '#certificates' },
   { label: 'Connect on LinkedIn', href: LINKEDIN, external: true },
 ]
