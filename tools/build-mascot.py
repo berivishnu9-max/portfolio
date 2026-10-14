@@ -389,6 +389,11 @@ if __name__ == '__main__':
         print('  %s%d  shift %+d,%+d  shirt overlap %.3f' % r)
 
     collar = fy + 241
+    # One bottom cut for every frame: a cell drawn higher in its sheet would otherwise
+    # end (and fade) higher, and the bust's lower edge would rise on that expression.
+    yb = min(int(np.nonzero(ft.any(1))[0].max()) for ft in feet) + 1
+    for ft in feet:
+        ft[yb:] = 0
     out = [bust(f, ft, collar) for f, ft in zip(frames, feet)]
     os.makedirs(DEST, exist_ok=True)
     for kind, group in (('directions', out[:9]), ('reactions', out[9:])):
