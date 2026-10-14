@@ -15,3 +15,20 @@
 .animate-blink {
   animation: blink 1s step-end infinite;
 }
+
+/* Greeting bubble when the portrait is clicked. */
+@keyframes bubble {
+  0% { opacity: 0; transform: translateY(8px) scale(0.92); }
+  12% { opacity: 1; transform: translateY(0) scale(1); }
+  85% { opacity: 1; transform: translateY(-4px); }
+  100% { opacity: 0; transform: translateY(-10px); }
+}
+
+.portrait-bubble {
+  animation: bubble 2.6s ease forwards;
+  transform-origin: bottom left;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .portrait-bubble { animation: none; }
+}

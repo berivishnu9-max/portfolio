@@ -13,7 +13,7 @@ case studies, skills, experience, certificates and contact sections below it.
 - `src/` — the hero (React, TypeScript, Vite, Tailwind CSS); copy and links live in `src/content.ts`
 - `public/cv.html` — CV, printable to PDF
 - `public/work.html` — redirect so old `work.html` links still land on the right section
-- `public/hero-*.mp4` — hero clip in wide and tall crops; backdrop keyed to the page colour with `tools/key-backdrop.py`
+- `public/portrait/` — hero frames (follow = head turn, react = smile on click), built from the Kling clips by `tools/build-portrait.sh`
 - `public/certs/`, `public/me.jpg` — certificates and profile photo
 
 Palette: canvas `#FAF9F6`, charcoal `#2C302E`, gold `#D4AF37` for fills, deep gold `#8A6D1A` for gold text.

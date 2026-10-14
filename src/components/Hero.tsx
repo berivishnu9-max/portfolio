@@ -35,8 +35,8 @@ export default function Hero() {
   }
 
   return (
-    <div className="relative z-[1] flex h-screen flex-col justify-end overflow-hidden px-5 pb-12 sm:px-8 md:px-10 wide:justify-center wide:pb-0">
-      <div className="relative z-10 max-w-xl">
+    <div className="pointer-events-none relative z-[1] flex h-screen flex-col justify-end overflow-hidden px-5 pb-12 sm:px-8 md:px-10 wide:justify-center wide:pb-0">
+      <div className="pointer-events-auto relative z-10 max-w-xl">
         {/* Readable copy for screen readers and search engines; the blurred line is decorative. */}
         <h1 className="sr-only">
           Beri Vishnu Vardhan Reddy — Business Analyst. {INTRO[1]}. {TYPED}
