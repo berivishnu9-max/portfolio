@@ -6,14 +6,14 @@ Portfolio of business analysis and consulting case work, covering enterprise ris
 governance, process redesign, public-sector prioritisation, sustainability analysis,
 decision modelling and demand forecasting.
 
-One continuous page: a full-screen hero whose portrait follows the cursor, then the
+One continuous page: a full-screen crimson hero whose character follows the cursor with its eyes and blinks, then the
 case studies, skills, experience, certificates and contact sections below it.
 
 - `index.html` — the page: hand-written sections and styles, with the hero mounted at `#root`
 - `src/` — the hero (React, TypeScript, Vite, Tailwind CSS); copy and links live in `src/content.ts`
 - `public/cv.html` — CV, printable to PDF
 - `public/work.html` — redirect so old `work.html` links still land on the right section
-- `public/portrait/` — hero frames (follow = head turn, react = smile on click), built from the Kling clips by `tools/build-portrait.sh`
+- `public/character/` — layered hero character (eyes, irises, lids) built from one front-facing frame by `tools/build-character.py`; animated by `src/components/Character.tsx`
 - `public/certs/`, `public/me.jpg` — certificates and profile photo
 
 Palette: canvas `#FAF9F6`, charcoal `#2C302E`, gold `#D4AF37` for fills, deep gold `#8A6D1A` for gold text.

@@ -36,7 +36,7 @@ export default function Hero() {
 
   return (
     <div className="pointer-events-none relative z-[1] flex h-screen flex-col justify-end overflow-hidden px-5 pb-12 sm:px-8 md:px-10 wide:justify-center wide:pb-0">
-      <div className="pointer-events-auto relative z-10 max-w-xl">
+      <div className="pointer-events-auto relative z-10 max-w-xl wide:max-w-[25rem]">
         {/* Readable copy for screen readers and search engines; the blurred line is decorative. */}
         <h1 className="sr-only">
           Beri Vishnu Vardhan Reddy — Business Analyst. {INTRO[1]}. {TYPED}
@@ -49,7 +49,7 @@ export default function Hero() {
             fontSize: 'clamp(18px, 4vw, 26px)',
             lineHeight: 1.3,
             fontWeight: 400,
-            color: '#2C302E',
+            color: '#FAF9F6',
             filter: 'blur(4px)',
           }}
         >
@@ -60,7 +60,7 @@ export default function Hero() {
 
         <p
           aria-hidden="true"
-          className="mb-5 mt-0 text-charcoal sm:mb-6"
+          className="mb-5 mt-0 text-canvas sm:mb-6"
           style={{
             fontSize: 'clamp(18px, 4vw, 26px)',
             lineHeight: 1.35,
@@ -70,7 +70,7 @@ export default function Hero() {
         >
           {displayed}
           {!done && (
-            <span className="animate-blink ml-[2px] inline-block h-[1.1em] w-[2px] bg-charcoal align-middle" />
+            <span className="animate-blink ml-[2px] inline-block h-[1.1em] w-[2px] bg-canvas align-middle" />
           )}
         </p>
 
@@ -95,7 +95,7 @@ export default function Hero() {
           <button
             type="button"
             onClick={copyEmail}
-            className={`${pill} cursor-pointer gap-2 border border-solid border-gold bg-gold font-[inherit] text-charcoal hover:border-charcoal hover:bg-charcoal hover:text-canvas sm:gap-3`}
+            className={`${pill} cursor-pointer gap-2 border border-solid border-canvas bg-transparent font-[inherit] text-canvas hover:bg-canvas hover:text-charcoal sm:gap-3`}
           >
             <span>
               {copied ? (

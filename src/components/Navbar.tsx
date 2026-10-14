@@ -17,7 +17,7 @@ export default function Navbar() {
   return (
     <>
       <nav className="absolute top-0 left-0 z-10 flex w-full items-center justify-between px-5 py-4 sm:px-8 sm:py-5">
-        <a href={import.meta.env.BASE_URL} className="flex items-center gap-3 text-charcoal no-underline">
+        <a href={import.meta.env.BASE_URL} className="flex items-center gap-3 text-canvas no-underline">
           <span
             className="text-[21px] tracking-tight sm:text-[26px]"
             style={{ fontFamily: 'var(--font-heading)' }}
@@ -33,7 +33,7 @@ export default function Navbar() {
           </span>
         </a>
 
-        <div className="hidden text-[23px] text-charcoal md:flex">
+        <div className="hidden text-[23px] text-canvas md:flex">
           {NAV_LINKS.map((link, i) => (
             <span key={link.label}>
               <a
@@ -50,7 +50,7 @@ export default function Navbar() {
 
         <a
           href={`mailto:${EMAIL}`}
-          className="hidden text-[23px] text-charcoal underline underline-offset-2 transition-opacity hover:opacity-60 md:inline"
+          className="hidden text-[23px] text-canvas underline underline-offset-2 transition-opacity hover:opacity-60 md:inline"
         >
           Get in touch
         </a>
@@ -64,18 +64,18 @@ export default function Navbar() {
           className="relative z-10 flex cursor-pointer flex-col gap-[5px] border-0 bg-transparent p-2 md:hidden"
         >
           <span
-            className={`h-[2px] w-6 bg-charcoal transition-transform duration-300 ${
-              open ? 'translate-y-[7px] rotate-45' : ''
+            className={`h-[2px] w-6 transition-all duration-300 ${
+              open ? 'translate-y-[7px] rotate-45 bg-charcoal' : 'bg-canvas'
             }`}
           />
           <span
-            className={`h-[2px] w-6 bg-charcoal transition-opacity duration-300 ${
+            className={`h-[2px] w-6 bg-canvas transition-opacity duration-300 ${
               open ? 'opacity-0' : 'opacity-100'
             }`}
           />
           <span
-            className={`h-[2px] w-6 bg-charcoal transition-transform duration-300 ${
-              open ? '-translate-y-[7px] -rotate-45' : ''
+            className={`h-[2px] w-6 transition-all duration-300 ${
+              open ? '-translate-y-[7px] -rotate-45 bg-charcoal' : 'bg-canvas'
             }`}
           />
         </button>

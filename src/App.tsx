@@ -1,11 +1,13 @@
-import Portrait from './components/Portrait'
+import { useRef } from 'react'
+import Character from './components/Character'
 import Navbar from './components/Navbar'
 import Hero from './components/Hero'
 
 export default function App() {
+  const heroRef = useRef<HTMLElement>(null)
   return (
-    <section id="hero" className="relative h-screen overflow-hidden bg-canvas text-charcoal">
-      <Portrait />
+    <section ref={heroRef} id="hero" className="relative h-screen overflow-hidden bg-crimson text-canvas">
+      <Character heroRef={heroRef} />
       <Navbar />
       <Hero />
     </section>

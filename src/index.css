@@ -16,19 +16,29 @@
   animation: blink 1s step-end infinite;
 }
 
-/* Greeting bubble when the portrait is clicked. */
-@keyframes bubble {
-  0% { opacity: 0; transform: translateY(8px) scale(0.92); }
-  12% { opacity: 1; transform: translateY(0) scale(1); }
-  85% { opacity: 1; transform: translateY(-4px); }
-  100% { opacity: 0; transform: translateY(-10px); }
+/* Hero character (src/components/Character.tsx). The art's backdrop is this red;
+   its edges are faded because the art's red is not perfectly uniform. */
+.character {
+  --fade-x: linear-gradient(to right, transparent, #000 9%, #000 91%, transparent);
+  --fade-y: linear-gradient(to bottom, transparent, #000 10%);
+  aspect-ratio: 1504 / 1290;
+  height: min(88vh, calc(100vw * 1290 / 1504));
+  -webkit-mask-image: var(--fade-x), var(--fade-y);
+  -webkit-mask-composite: source-in;
+  mask-image: var(--fade-x), var(--fade-y);
+  mask-composite: intersect;
 }
 
-.portrait-bubble {
-  animation: bubble 2.6s ease forwards;
-  transform-origin: bottom left;
-}
+.character canvas { opacity: 0; transition: opacity 0.2s ease; }
+.character canvas[data-ready] { opacity: 1; }
 
-@media (prefers-reduced-motion: reduce) {
-  .portrait-bubble { animation: none; }
+/* Portrait screens: character across the top, copy below on the red. */
+@media (max-aspect-ratio: 1/1) {
+  .character {
+    --fade-y: linear-gradient(to bottom, transparent, #000 8%, #000 72%, transparent);
+    top: 52px;
+    bottom: auto;
+    height: auto;
+    width: min(100vw, calc(60vh * 1504 / 1290));
+  }
 }
