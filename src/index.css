@@ -2,7 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
-/* --font-body and the page colours are defined by the portfolio styles in index.html. */
+/* --font-body, --gutter and the page colours are defined by the portfolio styles in index.html.
+   Colours: tailwind.config.js must match the :root tokens there. */
 :root {
   --font-heading: 'Instrument Sans Variable', 'Helvetica Neue', Arial, sans-serif;
   --font-serif: 'Instrument Serif', Georgia, serif;
@@ -54,12 +55,33 @@
 
 @media (max-aspect-ratio: 1/1) {
   .hero-section { height: auto; min-height: 100svh; display: flex; flex-direction: column; }
+  /* Sized so the name and both CTAs still fit the first screen of a real phone
+     (390x664 once the browser's own bars are taken off). */
   .character {
     position: relative; left: auto; bottom: auto; transform: none;
-    flex: none; margin: 64px auto 0;
-    width: min(92vw, 50svh); height: auto;
+    flex: none; margin: 56px auto 0;
+    width: min(72vw, 40svh); height: auto;
   }
   .hero-content { position: relative; inset: auto; flex: 1; justify-content: flex-start; margin-top: -1svh; padding-bottom: 40px; }
+}
+
+/* Hero type sizes live here so the short-landscape query below can override them. */
+.hero-h1 { font-size: clamp(2.2rem, 4.6vw, 4rem); }
+.hero-lede { font-size: clamp(1.05rem, 1.6vw, 1.3rem); }
+
+/* Phones on their side: too short for the stacked layout, so shrink everything. */
+@media (min-aspect-ratio: 1/1) and (max-height: 500px) {
+  .hero-section { height: auto; min-height: 100svh; }
+  #hero nav { height: 64px; }
+  .hero-content { position: relative; inset: auto; padding-top: 72px; padding-bottom: 24px; }
+  .character { height: 88vh; left: 76%; }
+  .hero-eyebrow { margin-bottom: 8px; }
+  .hero-eyebrow::before { display: none; }
+  .hero-h1 { font-size: 2rem; }
+  .hero-lede { font-size: 0.9rem; margin-top: 10px; }
+  .hero-ctas { margin-top: 14px; }
+  .hero-cred { display: none; } /* still one tap away in Certificates; the CTAs matter more here */
+  .hero-section .hero-copy { max-width: min(34rem, 52vw); } /* beats the wide: utility */
 }
 
 /* Hero copy: a short rise on load; content is never held back for long. */
@@ -77,12 +99,13 @@
 }
 .nav-link:hover, .nav-link:focus-visible { background-size: 100% 1px; }
 
-/* Visible focus on the red hero. */
-#hero a:focus-visible, #hero button:focus-visible, #mobile-menu a:focus-visible {
+/* Visible focus on the charcoal hero; dark rings on the light mobile menu. */
+#hero a:focus-visible, #hero button:focus-visible {
   outline: 2px solid #FAF9F6;
   outline-offset: 3px;
   border-radius: 6px;
 }
+#mobile-menu a:focus-visible, #hero button[aria-expanded="true"]:focus-visible { outline-color: #2C302E; }
 #mobile-menu a:focus-visible { outline-color: #2C302E; }
 
 @media (prefers-reduced-motion: reduce) {

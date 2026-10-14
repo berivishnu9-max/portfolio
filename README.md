@@ -6,8 +6,8 @@ Portfolio of business analysis and consulting case work, covering enterprise ris
 governance, process redesign, public-sector prioritisation, sustainability analysis,
 decision modelling and demand forecasting.
 
-One continuous page: a full-screen crimson hero whose character follows the cursor with its eyes and blinks, then the
-case studies, skills, experience, certificates and contact sections below it.
+One continuous page: a full-screen charcoal hero whose character turns its head toward the cursor and reacts when
+clicked, then the case studies, about, skills, experience, certificates and contact sections below it.
 
 - `index.html` — the page: hand-written sections and styles, with the hero mounted at `#root`
 - `src/` — the hero (React, TypeScript, Vite, Tailwind CSS); copy and links live in `src/content.ts`
@@ -19,7 +19,8 @@ case studies, skills, experience, certificates and contact sections below it.
   `src/components/Character.tsx`, which turns the head toward the cursor and plays an expression on click
 - `public/certs/`, `public/me.jpg` — certificates and profile photo
 
-Palette: canvas `#FAF9F6`, charcoal `#2C302E`, gold `#D4AF37` for fills, deep gold `#8A6D1A` for gold text.
+Palette: canvas `#FAF9F6` (60%), charcoal `#2C302E` (30%), gold `#D4AF37` (10%) for fills and for text on charcoal
+only; deep gold `#7A5F12` for gold text on canvas. `tailwind.config.js` mirrors the `:root` tokens in `index.html`.
 
 ## Develop
 

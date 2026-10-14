@@ -17,10 +17,13 @@ export const NAV_LINKS: Link[] = [
   { label: 'About', href: '#about' },
   { label: 'Skills', href: '#skills' },
   { label: 'Experience', href: '#record' },
+  { label: 'Certificates', href: '#certificates' },
   { label: 'Contact', href: '#contact' },
 ]
 
 export const EYEBROW = 'Business Analyst · Glasgow, UK'
+// Worded as on the certificate card in index.html.
+export const CREDENTIAL = 'Microsoft Certified: Power BI Data Analyst Associate (PL-300)'
 export const POSITIONING =
   'MSc Business Analysis & Consulting, University of Strathclyde. Four years running a 72-bed operation taught me to turn'
 export const POSITIONING_ACCENT = 'messy operations into clear decisions.'

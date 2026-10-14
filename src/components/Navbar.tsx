@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { CV_URL, EMAIL, LINKEDIN, NAME, NAV_LINKS } from '../content'
 import { scrollToHash } from '../lib/scroll'
 
+const menuLink = 'inline-flex min-h-[44px] items-center text-charcoal underline underline-offset-4'
+
 export default function Navbar() {
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -14,6 +16,14 @@ export default function Navbar() {
       if (e.key === 'Escape') {
         setOpen(false)
         toggleRef.current?.focus()
+      } else if (e.key === 'Tab') {
+        // The menu covers the page: keep focus cycling between its links and the close button.
+        const items = [toggleRef.current, ...Array.from(menuRef.current?.querySelectorAll<HTMLElement>('a') ?? [])].filter(
+          Boolean,
+        ) as HTMLElement[]
+        const i = items.indexOf(document.activeElement as HTMLElement)
+        e.preventDefault()
+        items[(i + (e.shiftKey ? -1 : 1) + items.length) % items.length].focus()
       }
     }
     window.addEventListener('keydown', onKey)
@@ -29,7 +39,7 @@ export default function Navbar() {
     <>
       <nav
         aria-label="Primary"
-        className="absolute left-0 top-0 z-10 flex w-full items-center justify-between px-5 py-4 sm:px-8 sm:py-5"
+        className="absolute left-0 top-0 z-10 flex h-16 w-full items-center justify-between px-[var(--gutter)] py-0 sm:h-20"
       >
         <a href="#top" onClick={go} className="flex items-center gap-3 text-canvas no-underline">
           <span className="text-[20px] font-semibold tracking-tight sm:text-[23px]">{NAME}</span>
@@ -93,20 +103,20 @@ export default function Navbar() {
         <ul className="m-0 flex list-none flex-col gap-5 p-0">
           {NAV_LINKS.map((link) => (
             <li key={link.label}>
-              <a href={link.href} onClick={go} className="text-[34px] font-semibold tracking-tight text-charcoal no-underline">
+              <a href={link.href} onClick={go} className="inline-flex min-h-[44px] items-center text-[34px] font-semibold tracking-tight text-charcoal no-underline">
                 {link.label}
               </a>
             </li>
           ))}
         </ul>
         <div className="mt-6 flex flex-wrap gap-x-6 gap-y-3 border-0 border-t border-solid border-charcoal/15 pt-6 text-[17px]">
-          <a href={CV_URL} target="_blank" rel="noopener" className="text-charcoal underline underline-offset-4">
+          <a href={CV_URL} target="_blank" rel="noopener" className={menuLink}>
             CV<span className="sr-only"> (opens in a new tab)</span>
           </a>
-          <a href={`mailto:${EMAIL}`} className="text-charcoal underline underline-offset-4">
+          <a href={`mailto:${EMAIL}`} className={menuLink}>
             Email
           </a>
-          <a href={LINKEDIN} target="_blank" rel="noopener noreferrer" className="text-charcoal underline underline-offset-4">
+          <a href={LINKEDIN} target="_blank" rel="noopener noreferrer" className={menuLink}>
             LinkedIn<span className="sr-only"> (opens in a new tab)</span>
           </a>
         </div>
