@@ -6,8 +6,12 @@ import { useEffect, useRef } from 'react'
  *   - irises are separate discs, moved per eye toward the pointer and clipped
  *     to the eye openings; the real upper lids are drawn over them
  *   - blinks sweep a sprite of the real lid skin and lash line down and up
- *   - the head turns by a small depth-weighted image warp in WebGL; the
- *     torso, shoulders and background stay fixed
+ *   - the head turns and tilts by a small depth-weighted image warp in WebGL;
+ *     the warp is zero from the neck down, so torso, shoulders, clothing and
+ *     background never move
+ *   - expressions are small local warps of the real art: brows lift (gaze up,
+ *     occasional interest, slightly asymmetric) or settle (focus), and the
+ *     lower lids rise a touch for warmth; eyes add tiny fixation movements
  * Everything is driven from one requestAnimationFrame loop. No React state
  * changes after mount.
  */
@@ -36,19 +40,23 @@ const HEAD_SHARE = 0.32 // fraction of the gaze the head takes over
 const HEAD_MAX_X = 11 // px (art scale) head shift at full yaw
 const HEAD_MAX_Y = 6
 const TOUCH_RELEASE_MS = 1200
-const SHOULDER_SHARE = 0.22 // shoulders follow a fraction of the head shift
-const BREATH_PX = 1.8 // art px the upper body rises on an in-breath
-const BREATH_MS = 4600 // average breath period
 const IDLE_AFTER_MS = 2500 // with no pointer, start occasional idle glances
+const HEAD_ROLL = 0.06 // rad of head tilt per rad of head yaw (people tilt as they turn)
+const EXPR_TAU = 140 // ms: brows and lids ease into expressions
 
 // Head region for the warp, in art pixels (measured on the frame).
 const HEAD_C = [765, 470]
 const HEAD_R = [430, 480]
 const NOSE = [752, 600]
 const NECK_Y = [830, 950]
-// Upper-body region: everything above BODY_Y[0] moves with the shoulders and
-// breathing; the effect fades to nothing at the bottom edge of the art.
-const BODY_Y = [900, 1290]
+const PIVOT = [765, 900] // head tilts about the top of the neck
+// Facial features moved by small local warps of the real art (measured).
+const BROW_L = [612, 403]
+const BROW_R = [890, 410]
+const BROW_RAD = [115, 34]
+const LOWLID_L = [626, 530]
+const LOWLID_R = [880, 542]
+const LOWLID_RAD = [78, 18]
 
 const VERT = `
 attribute vec2 aPos;
@@ -66,7 +74,10 @@ uniform sampler2D uEyes;
 uniform vec2 uSize;      // art size in px
 uniform vec4 uEyesRect;  // x, y, w, h in px
 uniform vec2 uHead;      // head shift in px
-uniform vec2 uBody;      // shoulder + breathing shift in px
+uniform float uRoll;     // head tilt in rad
+uniform vec2 uBrow;      // left/right brow lift in px (negative lowers)
+uniform float uLowLid;   // lower-lid rise in px
+float bump(vec2 p, vec2 c, vec2 r) { vec2 d = (p - c) / r; return exp(-dot(d, d)); }
 void main() {
   vec2 p = vUv * uSize;
   // Weight: 1 on the head, 0 on the neck, shirt and background.
@@ -75,9 +86,17 @@ void main() {
   w *= 1.0 - smoothstep(${NECK_Y[0]}.0, ${NECK_Y[1]}.0, p.y);
   // Pseudo-depth: the nose and eyes move more than the outline -> a turn, not a slide.
   float depth = 0.45 + 0.55 * (1.0 - smoothstep(0.0, 1.0, length((p - vec2(${NOSE[0]}.0, ${NOSE[1]}.0)) / 360.0)));
-  // One smooth displacement field, so head, neck and shoulders never separate.
-  float body = 1.0 - smoothstep(${BODY_Y[0]}.0, ${BODY_Y[1]}.0, p.y);
-  vec2 src = p - uBody * body - uHead * w * depth;
+  // Head only: shift with depth plus a small tilt about the neck. The weight
+  // is zero from the neck down, so shoulders, shirt and background never move.
+  vec2 src = p - uHead * w * depth;
+  float a = -uRoll * w;
+  vec2 d0 = src - vec2(${PIVOT[0]}.0, ${PIVOT[1]}.0);
+  src = vec2(${PIVOT[0]}.0, ${PIVOT[1]}.0) + vec2(cos(a) * d0.x - sin(a) * d0.y, sin(a) * d0.x + cos(a) * d0.y);
+  // Expressions: brows and lower lids slide a few px on the face.
+  src.y += uBrow.x * bump(src, vec2(${BROW_L[0]}.0, ${BROW_L[1]}.0), vec2(${BROW_RAD[0]}.0, ${BROW_RAD[1]}.0));
+  src.y += uBrow.y * bump(src, vec2(${BROW_R[0]}.0, ${BROW_R[1]}.0), vec2(${BROW_RAD[0]}.0, ${BROW_RAD[1]}.0));
+  src.y += uLowLid * (bump(src, vec2(${LOWLID_L[0]}.0, ${LOWLID_L[1]}.0), vec2(${LOWLID_RAD[0]}.0, ${LOWLID_RAD[1]}.0))
+                    + bump(src, vec2(${LOWLID_R[0]}.0, ${LOWLID_R[1]}.0), vec2(${LOWLID_RAD[0]}.0, ${LOWLID_RAD[1]}.0)));
   vec2 q = (src - uEyesRect.xy) / uEyesRect.zw;
   vec4 c = texture2D(uBase, src / uSize);
   if (q.x >= 0.0 && q.y >= 0.0 && q.x <= 1.0 && q.y <= 1.0) {
@@ -181,7 +200,9 @@ export default function Character({ heroRef }: { heroRef: React.RefObject<HTMLEl
       gl.uniform2f(u('uSize'), meta.width, meta.height)
       gl.uniform4f(u('uEyesRect'), ex0, ey0, eyeCanvas.width, eyeCanvas.height)
       const uHead = u('uHead')
-      const uBody = u('uBody')
+      const uRoll = u('uRoll')
+      const uBrow = u('uBrow')
+      const uLowLid = u('uLowLid')
 
       const resize = () => {
         const dpr = Math.min(window.devicePixelRatio || 1, 2)
@@ -235,9 +256,15 @@ export default function Character({ heroRef }: { heroRef: React.RefObject<HTMLEl
 
       // --- Blinks --------------------------------------------------------------
       // Human-like: mostly every 2-6 s (skewed), sometimes a quick double blink.
-      const CLOSE_MS = 75
-      const HOLD_MS = 35
-      const OPEN_MS = 125
+      // Each blink gets its own speed so they never look machine-timed.
+      let CLOSE_MS = 75
+      let HOLD_MS = 35
+      let OPEN_MS = 125
+      const vary = () => {
+        CLOSE_MS = 62 + Math.random() * 30
+        HOLD_MS = 20 + Math.random() * 40
+        OPEN_MS = 105 + Math.random() * 60
+      }
       const nextGap = () => Math.min(7000, Math.max(1300, 1600 - Math.log(Math.random()) * 1900))
       let blinkAt = performance.now() + 900 + Math.random() * 1500
       let blinkStart = -1
@@ -245,6 +272,7 @@ export default function Character({ heroRef }: { heroRef: React.RefObject<HTMLEl
       const lidAmount = (now: number) => {
         if (blinkStart < 0 && now >= blinkAt) {
           blinkStart = now
+          vary()
         }
         if (blinkStart < 0) return 0
         const t = now - blinkStart
@@ -252,6 +280,7 @@ export default function Character({ heroRef }: { heroRef: React.RefObject<HTMLEl
         if (t < CLOSE_MS + HOLD_MS) return 1
         if (t < CLOSE_MS + HOLD_MS + OPEN_MS) return 1 - (t - CLOSE_MS - HOLD_MS) / OPEN_MS
         blinkStart = -1
+        lastBlinkEnd = now
         if (!doubleQueued && Math.random() < 0.16) {
           doubleQueued = true
           blinkAt = now + 110 + Math.random() * 90
@@ -261,6 +290,46 @@ export default function Character({ heroRef }: { heroRef: React.RefObject<HTMLEl
         }
         return 0
       }
+
+      // People often blink with a large change of gaze.
+      let lastBlinkEnd = 0
+      const maybeGazeBlink = (now: number) => {
+        if (blinkStart < 0 && now - lastBlinkEnd > 1200 && Math.random() < 0.35) blinkAt = now
+      }
+
+      // --- Expressions ----------------------------------------------------------
+      // Rare, small, mostly asymmetric: attentive interest (brows up), warmth
+      // (lower lids rise a touch), concentration (brows settle down a little).
+      type Expr = { brow: number; asym: number; lowLid: number; start: number; dur: number }
+      let expr: Expr | null = null
+      let exprNext = performance.now() + 4000 + Math.random() * 4000
+      const startExpr = (now: number, kind: 'interest' | 'warm' | 'focus') => {
+        const asym = 0.7 + Math.random() * 0.3
+        expr =
+          kind === 'interest'
+            ? { brow: 2.6 + Math.random() * 1.2, asym, lowLid: 0, start: now, dur: 1300 + Math.random() * 700 }
+            : kind === 'warm'
+              ? { brow: 0.8, asym, lowLid: 1.5 + Math.random() * 0.6, start: now, dur: 1800 + Math.random() * 900 }
+              : { brow: -1.3, asym, lowLid: 0.6, start: now, dur: 1500 + Math.random() * 800 }
+      }
+      const envelope = (t: number, dur: number) => {
+        if (t < 0 || t > dur) return 0
+        const attack = 260
+        const release = 520
+        if (t < attack) return 0.5 - 0.5 * Math.cos((Math.PI * t) / attack)
+        if (t > dur - release) return 0.5 + 0.5 * Math.cos((Math.PI * (t - (dur - release))) / release)
+        return 1
+      }
+      let browL = 0
+      let browR = 0
+      let lowLid = 0
+      let roll = 0
+      let rollV = 0
+      // Fixation micro-movements: tiny eye offsets that change every so often.
+      let microX = 0
+      let microY = 0
+      let microNext = 0
+      let wasPointer = false
 
       // --- Loop ----------------------------------------------------------------
       let gazeYaw = 0
@@ -272,9 +341,6 @@ export default function Character({ heroRef }: { heroRef: React.RefObject<HTMLEl
       let idleYaw = 0
       let idlePitch = 0.04
       let idleNext = 0
-      // Breathing: phase advances with a slightly varying period.
-      let breathPhase = Math.random() * Math.PI * 2
-      let breathPeriod = BREATH_MS
       let headPitch = 0
       let prev = performance.now()
       let visible = true
@@ -298,6 +364,7 @@ export default function Character({ heroRef }: { heroRef: React.RefObject<HTMLEl
         let tPitch = 0
         const motionOn = !reduceMotion.matches
         if (!pointer && motionOn && now - lastActive > IDLE_AFTER_MS && now > idleNext) {
+          maybeGazeBlink(now)
           const toViewer = Math.random() < 0.45
           idleYaw = toViewer ? 0 : (Math.random() * 2 - 1) * 0.16
           idlePitch = toViewer ? 0.04 : -0.05 + Math.random() * 0.13
@@ -326,8 +393,47 @@ export default function Character({ heroRef }: { heroRef: React.RefObject<HTMLEl
         }
         ;[headYaw, headYawV] = step(headYaw, headYawV, motionOn ? tYaw * HEAD_SHARE : 0)
         ;[headPitch, headPitchV] = step(headPitch, headPitchV, motionOn ? tPitch * HEAD_SHARE : 0)
+        // A big jump in where the eyes need to look sometimes brings a blink.
+        if (Math.hypot(tYaw - gazeYaw, tPitch - gazePitch) > 0.45) maybeGazeBlink(now)
         gazeYaw = expApproach(gazeYaw, tYaw, dt, EYE_TAU)
         gazePitch = expApproach(gazePitch, tPitch, dt, EYE_TAU)
+
+        // Head tilt follows the turn, with a faint slow drift so it is never frozen.
+        const drift = motionOn ? 0.006 * Math.sin(now / 2900) + 0.004 * Math.sin(now / 1700 + 1.3) : 0
+        ;[roll, rollV] = step(roll, rollV, motionOn ? -headYaw * HEAD_ROLL * 2 + drift : 0)
+
+        // Fixation micro-movements (sub-pixel to ~0.7px), refreshed at irregular intervals.
+        if (motionOn && now > microNext) {
+          microX = (Math.random() * 2 - 1) * 0.7
+          microY = (Math.random() * 2 - 1) * 0.45
+          microNext = now + 450 + Math.random() * 1100
+        }
+
+        // Expressions: an acknowledging brow lift when someone arrives, warmth when
+        // the pointer rests on the face, otherwise rare small events.
+        if (motionOn) {
+          // Expressions stay occasional: at least 4 s of neutral between them.
+          const rested = !expr || now - expr.start > expr.dur + 4000
+          if (pointer && !wasPointer && rested) startExpr(now, 'interest')
+          const onFace = pointer && Math.abs(tYaw) < 0.12 && Math.abs(tPitch) < 0.12
+          if (rested) {
+            if (onFace && Math.random() < dt / 5000) startExpr(now, 'warm')
+            else if (now > exprNext) {
+              const r = Math.random()
+              startExpr(now, r < 0.45 ? 'interest' : r < 0.75 ? 'focus' : 'warm')
+              exprNext = now + 6000 + Math.random() * 8000
+            }
+          }
+        }
+        wasPointer = !!pointer
+        const env = expr ? envelope(now - expr.start, expr.dur) : 0
+        // Brows also lift a little when looking up, as they naturally do.
+        const lookUp = Math.max(0, -gazePitch) * 4
+        const tBrowL = motionOn ? lookUp + (expr ? expr.brow * env : 0) : 0
+        const tBrowR = motionOn ? lookUp + (expr ? expr.brow * env * expr.asym : 0) : 0
+        browL = expApproach(browL, tBrowL, dt, EXPR_TAU)
+        browR = expApproach(browR, tBrowR, dt, EXPR_TAU)
+        lowLid = expApproach(lowLid, motionOn && expr ? expr.lowLid * env : 0, dt, EXPR_TAU)
 
         const lid = lidAmount(now)
         const lidIndex = Math.round(Math.min(1, Math.max(0, lid)) * (meta.lidSteps - 1))
@@ -340,8 +446,8 @@ export default function Character({ heroRef }: { heroRef: React.RefObject<HTMLEl
           const pitE = gazePitch + (perEye[n][1] - tPitch) - headPitch
           const gx = Math.tanh(yawE / MAX_YAW)
           const gy = Math.tanh(pitE / MAX_PITCH)
-          e.ox = gx * e.rangeX
-          e.oy = gy * (gy > 0 ? e.rangeDown : e.rangeUp)
+          e.ox = gx * e.rangeX + microX
+          e.oy = gy * (gy > 0 ? e.rangeDown : e.rangeUp) + microY
 
           const [bx, by, bw, bh] = e.box
           const s = e.sctx
@@ -374,23 +480,13 @@ export default function Character({ heroRef }: { heroRef: React.RefObject<HTMLEl
         const hx = Math.max(-1, Math.min(1, headYaw / (MAX_YAW * HEAD_SHARE))) * HEAD_MAX_X
         const hy = Math.max(-1, Math.min(1, headPitch / (MAX_PITCH * HEAD_SHARE))) * HEAD_MAX_Y
         gl.uniform2f(uHead, hx, hy)
-        // Shoulders follow the head a little; breathing lifts the upper body.
-        let breath = 0
-        if (motionOn) {
-          breathPhase += (dt / breathPeriod) * Math.PI * 2
-          if (breathPhase > Math.PI * 2) {
-            breathPhase -= Math.PI * 2
-            breathPeriod = BREATH_MS * (0.85 + Math.random() * 0.3)
-          }
-          breath = -BREATH_PX * (0.5 - 0.5 * Math.cos(breathPhase))
-        }
-        const bx = hx * SHOULDER_SHARE
-        const by = hy * SHOULDER_SHARE * 0.5 + breath
-        gl.uniform2f(uBody, bx, by)
+        gl.uniform1f(uRoll, roll)
+        gl.uniform2f(uBrow, browL, browR)
+        gl.uniform1f(uLowLid, lowLid)
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
         canvas.dataset.ready = '1'
         // Exposed for automated checks only (read-only snapshot).
-        canvas.dataset.state = `${eyes.map((e) => `${e.ox.toFixed(1)},${e.oy.toFixed(1)}`).join(';')}|${headYaw.toFixed(3)},${headPitch.toFixed(3)}|${lidIndex}|${bx.toFixed(2)},${by.toFixed(2)}`
+        canvas.dataset.state = `${eyes.map((e) => `${e.ox.toFixed(1)},${e.oy.toFixed(1)}`).join(';')}|${headYaw.toFixed(3)},${headPitch.toFixed(3)}|${lidIndex}|${browL.toFixed(2)},${browR.toFixed(2)},${lowLid.toFixed(2)},${roll.toFixed(4)}`
       }
       raf = requestAnimationFrame(tick)
 
