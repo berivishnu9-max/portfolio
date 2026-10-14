@@ -14,9 +14,11 @@ clicked, then the case studies, about, skills, experience, certificates and cont
 - `public/cv.html` — CV, printable to PDF
 - `public/work.html` — redirect so old `work.html` links still land on the right section
 - `public/mascot/` — the hero character: two 3×3 atlases (nine head directions, nine expressions) built from
-  hand-made sheets by `tools/build-mascot.py` (keys out the red background, keeps the shoulders still across
-  poses, fits the expression faces onto the direction faces, builds the blink); played by
-  `src/components/Character.tsx`, which turns the head toward the cursor and plays an expression on click
+  the hand-made sheets in `tools/mascot-src/` by `tools/build-mascot.py` (keys out the red background, mirrors
+  the damaged right-facing cells from their left-facing twins, keeps the shoulders still across every pose and
+  expression, builds the blink); played by `src/components/Character.tsx`, which turns the head toward the
+  cursor and plays an expression when the head is clicked or tapped. Rebuild with
+  `python3 tools/build-mascot.py` (needs Pillow, NumPy and SciPy).
 - `public/certs/`, `public/me.jpg` — certificates and profile photo
 
 Palette: canvas `#FAF9F6` (60%), charcoal `#2C302E` (30%), gold `#D4AF37` (10%) for fills and for text on charcoal
