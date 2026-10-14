@@ -1,7 +1,9 @@
 """Turn the two hand-made 3x3 sheets (head directions, expressions) into the hero
 character's atlases.
 
-    python3 tools/build-mascot.py <directions.webp> <reactions.webp> [--debug DIR]
+    python3 tools/build-mascot.py [<directions.webp> <reactions.webp>] [--debug DIR]
+
+With no paths it reads the owner's sheets from tools/mascot-src/.
 
 The sheets were drawn on a red background, with grid seams, shoulders cut off at the
 cell edges and one damaged cell, so the page-mascot skill's build cannot read them
@@ -29,7 +31,7 @@ from scipy import ndimage
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEST = os.path.join(ROOT, 'public', 'mascot')
-TILE = 640
+TILE = 480  # the art itself is ~344px a cell; larger tiles only add bytes
 
 # Measured seams (x0, x1) / (y0, y1), end-exclusive.
 GRID = {
@@ -152,8 +154,15 @@ def key(cell):
     return Image.fromarray(out, 'RGBA')
 
 
+SIZES = {'directions': (1024, 936), 'reactions': (1254, 1254)}
+
+
 def cells(path, kind):
     sheet = Image.open(path).convert('RGB')
+    # The seams in GRID were measured on these exact sheets; a re-export at another
+    # size needs them measured again.
+    if sheet.size != SIZES[kind]:
+        sys.exit(f'{path}: expected a {SIZES[kind][0]}x{SIZES[kind][1]} {kind} sheet, got {sheet.size[0]}x{sheet.size[1]}; re-measure GRID')
     g = GRID[kind]
     return [sheet.crop((x0, y0, x1, y1)) for (y0, y1) in g['rows'] for (x0, x1) in g['cols']]
 
@@ -199,12 +208,20 @@ def register(moving, ref, search=24, margin=26, band=(0.2, 0.8)):
 S_SRC = 344                    # square tile side, in directions-sheet pixels
 
 
+def composite(canvas, t, x, y):
+    """Alpha-composite t onto canvas at (x, y), which may be negative.
+
+    Image.paste with a mask would square the alpha of every soft edge pixel."""
+    x, y = round(x), round(y)
+    canvas.alpha_composite(t.crop((max(0, -x), max(0, -y), t.width, t.height)), (max(0, x), max(0, y)))
+
+
 def place(t, scale, ox, oy):
     """Paste tile t, scaled, at (ox, oy) on a square canvas; also return its footprint."""
     if scale != 1:
         t = t.resize((round(t.width * scale), round(t.height * scale)), Image.LANCZOS)
     canvas = Image.new('RGBA', (S_SRC, S_SRC), (0, 0, 0, 0))
-    canvas.alpha_composite(t, (round(ox), round(oy))) if ox >= 0 and oy >= 0 else canvas.paste(t, (round(ox), round(oy)), t)
+    composite(canvas, t, ox, oy)
     foot = np.zeros((S_SRC, S_SRC), np.float64)
     x0, y0 = max(0, round(ox)), max(0, round(oy))
     foot[y0:min(S_SRC, round(oy) + t.height), x0:min(S_SRC, round(ox) + t.width)] = 1
@@ -290,7 +307,7 @@ def shift_to_face(frame, ref, search=14):
     best = max(((r & m[y0 - dy:y1 - dy, x0 - dx:x1 - dx]).sum() / max((r | m[y0 - dy:y1 - dy, x0 - dx:x1 - dx]).sum(), 1), dx, dy)
                for dx in range(-search, search + 1) for dy in range(-search, search + 1))
     out = Image.new('RGBA', frame.size, (0, 0, 0, 0))
-    out.alpha_composite(frame, (0, 0)) if best[1:] == (0, 0) else out.paste(frame, best[1:], frame)
+    composite(out, frame, *best[1:])
     return out
 
 
@@ -318,7 +335,9 @@ def blink_from(front, closed):
 
 
 if __name__ == '__main__':
-    dpath, rpath = sys.argv[1], sys.argv[2]
+    paths = [a for a in sys.argv[1:3] if not a.startswith('--')]
+    here = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'mascot-src')
+    dpath, rpath = paths if len(paths) == 2 else (os.path.join(here, 'directions.webp'), os.path.join(here, 'reactions.webp'))
     debug = sys.argv[sys.argv.index('--debug') + 1] if '--debug' in sys.argv else None
     dcells = cells(dpath, 'directions')
     # The right-facing cells are damaged in the source sheet: down-right has a smoke-like
@@ -345,13 +364,23 @@ if __name__ == '__main__':
     # expressions are then registered onto that one by their shoulders.
     s_fit, rx, ry, fscore = face_fit(frames[4], rk[4])
     print(f'  face fit  scale {s_fit:.3f}  at {rx:+.0f},{ry:+.0f}  overlap {fscore:.3f}')
+    # The face fit sets the scale; the position then comes from the shoulders, because
+    # the body must not move when an expression plays - only the head may.
+    _, cx, cy = register(place(rk[4], s_fit, rx, ry)[0], frames[4], search=20)
+    rx, ry = rx + cx, ry + cy
+    print(f'  body anchor  {cx:+d},{cy:+d}')
     for i, t in enumerate(rk):
         if i == 4:
             score, dx, dy = 1.0, 0, 0
         else:
             score, dx, dy = register(t, rk[4], search=30)
         f, ft = place(t, s_fit, rx + dx * s_fit, ry + dy * s_fit)
-        frames.append(f); feet.append(ft); report.append(('r', i, dx, dy, round(score, 3)))
+        # Settle each expression's own collar onto the front body: chaining through the
+        # 'bright' frame leaves a few pixels of drift per drawing.
+        _, sx, sy = register(f, frames[4], search=6)
+        if (sx, sy) != (0, 0):
+            f, ft = place(t, s_fit, rx + dx * s_fit + sx, ry + dy * s_fit + sy)
+        frames.append(f); feet.append(ft); report.append(('r', i, dx + sx, dy + sy, round(score, 3)))
     # The expressions sheet's own blink is that sheet's chubbier face, which would make
     # every blink a twitch. Build one on the front direction instead.
     frames[9] = blink_from(frames[4], frames[9])

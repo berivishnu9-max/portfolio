@@ -44,8 +44,7 @@
   content: ''; display: block; width: 40px; height: 1px; margin-bottom: 18px; background: currentColor;
 }
 .character-poster { background-size: 300% 300%; background-position: 50% 50%; background-repeat: no-repeat; }
-.character canvas { opacity: 0; transition: opacity 0.2s ease; }
-.character canvas[data-ready] { opacity: 1; }
+/* The poster is the canvas's first frame, so they swap in the same paint: no fade, no dip. */
 .character[data-ready] .character-poster { visibility: hidden; }
 
 /* Squarer landscape screens (4:3, 3:2): smaller and further right, clear of the copy. */
@@ -69,9 +68,15 @@
 .hero-h1 { font-size: clamp(2.2rem, 4.6vw, 4rem); }
 .hero-lede { font-size: clamp(1.05rem, 1.6vw, 1.3rem); }
 
-/* Landscape: keep the centred copy clear of the 80px hero nav on shorter windows. */
+/* Landscape: the copy is centred below the 80px hero nav, and the hero grows rather
+   than clipping when the copy needs more room (short windows, zoom, text spacing). */
 @media (min-aspect-ratio: 1/1) and (min-height: 501px) {
-  .hero-content { padding-top: 80px; }
+  .hero-section { height: auto; min-height: max(100svh, 560px); }
+  .hero-content { position: relative; inset: auto; min-height: inherit; padding-top: 80px; padding-bottom: 32px; }
+}
+/* Narrow landscape (zoomed laptops): keep the copy off the character's face. */
+@media (min-aspect-ratio: 1/1) and (max-width: 767px) and (min-height: 501px) {
+  .hero-section .hero-copy { max-width: min(34rem, 54vw); }
 }
 
 /* Phones on their side: too short for the stacked layout, so shrink everything. */

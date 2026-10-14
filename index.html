@@ -34,11 +34,14 @@
     --font-display:'Instrument Sans Variable','Helvetica Neue',Arial,sans-serif;
     --font-accent:'Instrument Serif',Georgia,serif;
   }
-  @media(max-width:860px){:root{--section-y:var(--s5)}main section[id]{scroll-margin-top:64px}}
+  @media(max-width:860px){:root{--section-y:var(--s5)}}
   /* Gold: #D4AF37 for fills and rules on light, and for text on #2C302E only (6.36:1).
      Gold text or glyphs on light surfaces use --accent #7A5F12. */
   *{margin:0;padding:0;box-sizing:border-box}
-  html{scrollbar-width:thin;scrollbar-color:rgba(44,48,46,.25) transparent}
+  /* Anchors and keyboard focus stop below the fixed 64px header (WCAG 2.4.11). */
+  html{scrollbar-width:thin;scrollbar-color:rgba(44,48,46,.25) transparent;scroll-padding-top:72px}
+  /* The React hero mounts after load; reserving its height keeps deep links and observers right. */
+  #top{min-height:100svh}
   html.lenis,html.lenis body{height:auto}
   .lenis.lenis-smooth{scroll-behavior:auto!important}
   body{
@@ -83,7 +86,7 @@
 
   /* ============ Safety net: animation libraries unavailable ============ */
   .no-motion #preloader{display:none!important}
-  .no-motion .pre-name,.no-motion .reveal-phrase,.no-motion .stmt-line,.no-motion [data-reveal]{opacity:1!important;transform:none!important}
+  .no-motion .pre-name,.no-motion .reveal-phrase,.no-motion .stmt-line,.no-motion [data-reveal],.no-motion .proj-item,.no-motion .process-steps li{opacity:1!important;transform:none!important}
   .no-motion .g-card{display:none!important}
   .no-motion .cert-body{max-height:none!important;visibility:visible!important}
   .no-motion .skill-panel{display:block!important}
@@ -162,7 +165,7 @@
     font-size:.9375rem;font-weight:500;color:var(--dim);padding:8px 0;transition:color .25s;
   }
   .tn-links a:hover,.tn-cta a:hover,.tn-links a:focus-visible,.tn-cta a:focus-visible{color:var(--fg)}
-  #topnav a.current{color:var(--accent)}
+  #topnav a.current{color:var(--accent);text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:6px}
   #topnav a:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;border-radius:3px}
   /* Over the charcoal hero the bar docks in the hero's colours, then turns light. */
   body:not(.past-hero) #topnav{background:rgba(44,48,46,.92);border-bottom-color:rgba(250,249,246,.16);color:#FAF9F6}
@@ -176,6 +179,8 @@
     .tn-links{flex:1;min-width:0;gap:16px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;
       -webkit-mask-image:linear-gradient(to right,#000 85%,transparent);mask-image:linear-gradient(to right,#000 85%,transparent)}
     .tn-links::-webkit-scrollbar{display:none}
+    .tn-links{scroll-padding-inline:40px}
+    .tn-links:focus-within{-webkit-mask-image:none;mask-image:none}
     .tn-cta{gap:14px}
     .tn-links a,.tn-cta a{font-size:.875rem;white-space:nowrap;min-height:44px;display:inline-flex;align-items:center;padding:0}
   }
@@ -326,21 +331,21 @@
   .cover.c-red{background:linear-gradient(145deg,#F4EEDC 0%,#FFFFFF 55%),#FFFFFF}
   .cover>svg{position:absolute;inset:0;width:100%;height:100%}
   .d-illus{
-    position:relative;aspect-ratio:4/3;border:1px solid var(--line);
+    position:relative;border:1px solid var(--line);
     background:#FFFFFF;margin-bottom:21px;overflow:hidden;
   }
   .d-illus::before{content:"";position:absolute;inset:0;background:
     repeating-linear-gradient(90deg,transparent 0 39px,rgba(44,48,46,.05) 39px 40px),
     repeating-linear-gradient(0deg,transparent 0 39px,rgba(44,48,46,.05) 39px 40px)}
   .d-figcap{
-    position:absolute;left:0;right:0;bottom:0;z-index:2;
+    position:relative;z-index:2;
     display:flex;justify-content:space-between;align-items:center;
     padding:8px 13px;border-top:1px solid var(--line);
     background:rgba(250,249,246,.72);backdrop-filter:blur(4px);
     font-size:.75rem;font-weight:500;letter-spacing:.1em;line-height:1.4;text-transform:uppercase;color:var(--dim);
   }
   .d-figcap span:first-child{color:var(--accent)}
-  .d-illus>svg{position:absolute;inset:0;width:100%;height:100%}
+  .d-illus>svg{position:relative;display:block;width:100%;height:auto;aspect-ratio:4/3}
 
   /* ============ Detail overlay ============ */
   #detail{
@@ -385,13 +390,14 @@
   #d-body ul li::before{content:"·";color:var(--accent);font-weight:700;flex-shrink:0}
   .d-next{display:block;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line);font:inherit;color:inherit;margin-top:89px;padding:55px 0 0;cursor:pointer}
   .d-next:focus-visible{outline:2px solid var(--accent);outline-offset:6px}
+  .d-back:focus-visible{outline-offset:-4px}
   .d-next .micro{display:block;margin-bottom:12px}
   .d-next-title{
     font-family:var(--font-display);font-weight:600;letter-spacing:-.02em;
     font-size:clamp(1.5rem,3.6vw,2.125rem);line-height:1.1;display:inline-block;
     transition:color .3s ease,transform .35s ease;
   }
-  .d-next-title::after{content:"\00a0→";color:var(--accent)}
+  .d-next-title::after{content:"\00a0→";content:"\00a0→" / "";color:var(--accent)}
   .d-next:hover .d-next-title{color:var(--accent);transform:translateX(12px)}
   .d-metrics{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line)}
   .d-metrics div{background:#FFFFFF;padding:21px;transition:background .3s ease,transform .3s ease}
@@ -587,7 +593,8 @@
     .about-photo{justify-self:center;max-width:420px}
     .proj-item{grid-template-columns:28px minmax(0,1fr) 20px;column-gap:13px}
     .d-grid{grid-template-columns:1fr;gap:5vh}
-    .c-grid{grid-template-columns:1fr;gap:6vh}
+    .c-grid{grid-template-columns:minmax(0,1fr);gap:6vh}
+    .c-action{overflow-wrap:anywhere}
     .numbers-grid{grid-template-columns:1fr 1fr}
     .process-steps{grid-template-columns:1fr;gap:21px}
     .process-steps::before{top:2%;bottom:2%;left:7px;right:auto;width:1px;height:auto}
@@ -648,7 +655,7 @@
     </div>
     <div class="tn-cta">
       <a href="#contact">Contact</a>
-      <a href="cv.html" target="_blank" rel="noopener">CV ↗<span class="sr-only">(opens in a new tab)</span></a>
+      <a href="cv.html" target="_blank" rel="noopener">CV<span aria-hidden="true"> ↗</span><span class="sr-only"> (opens in a new tab)</span></a>
     </div>
   </nav>
 </header>
@@ -772,7 +779,7 @@
         English, Telugu &amp; Hindi (fluent) · Kannada (conversational) · UK Student visa (20 hrs/week term-time, full-time during holidays) · Available immediately.
       </p>
       <div class="about-cta" data-reveal>
-        <a class="bar-link" href="#contact" data-roll="Get in touch ↗">Get in touch ↗</a>
+        <a class="bar-link" href="#contact" data-roll="Get in touch →">Get in touch →</a>
       </div>
     </div>
     <div class="about-photo" data-reveal>
@@ -829,7 +836,7 @@
       Methods from the MSc in Business Analysis &amp; Consulting at Strathclyde, grounded in four years of operations management and financial training.
     </div>
     <div class="skills-sep"></div>
-    <a class="bar-link" href="#contact" data-roll="Contact me ↗">Contact me ↗</a>
+    <a class="bar-link" href="#contact" data-roll="Contact me →">Contact me →</a>
   </div>
     <div id="skill-groups">
     <div class="skill-tabs" role="tablist" aria-label="Skill categories">
@@ -902,7 +909,7 @@
         <div class="cert-skills"><span>Power BI</span><span>Data preparation</span><span>Data modelling</span><span>Reporting &amp; visualisation</span></div>
         <div class="cert-id">Credential ID: 8628CAB135C1001B · Certification number: 0DE469-E6AQ18</div>
         <div class="cert-actions">
-          <a class="btn-mini ghost" href="certs/power-bi-data-analyst-pl300.pdf" target="_blank" rel="noopener">Certificate<span class="sr-only">: Microsoft Certified: Power BI Data Analyst Associate (opens in a new tab)</span> ↗</a>
+          <a class="btn-mini ghost" href="certs/power-bi-data-analyst-pl300.pdf" target="_blank" rel="noopener">Certificate<span class="sr-only">: Microsoft Certified: Power BI Data Analyst Associate (opens in a new tab)</span><span aria-hidden="true"> ↗</span></a>
         </div>
       </div>
     </div>
@@ -916,7 +923,7 @@
         <div class="cert-skills"><span>Power BI</span><span>Data modelling</span></div>
         <div class="cert-id">Credential: coursera.org/verify/ADTL42P83I84</div>
         <div class="cert-actions">
-          <a class="btn-mini ghost" href="certs/power-bi-data-modeling.pdf" target="_blank" rel="noopener">Certificate<span class="sr-only">: Data Modeling in Power BI (opens in a new tab)</span> ↗</a>
+          <a class="btn-mini ghost" href="certs/power-bi-data-modeling.pdf" target="_blank" rel="noopener">Certificate<span class="sr-only">: Data Modeling in Power BI (opens in a new tab)</span><span aria-hidden="true"> ↗</span></a>
         </div>
       </div>
     </div>
@@ -930,7 +937,7 @@
         <div class="cert-skills"><span>AI fundamentals</span><span>Machine learning concepts</span><span>AI ethics</span></div>
         <div class="cert-id">Verification code: 9by0yomw5e (certificates.mooc.fi)</div>
         <div class="cert-actions">
-          <a class="btn-mini" href="certs/elements-of-ai.png" target="_blank" rel="noopener">Certificate<span class="sr-only">: Elements of AI (opens in a new tab)</span> ↗</a>
+          <a class="btn-mini" href="certs/elements-of-ai.png" target="_blank" rel="noopener">Certificate<span class="sr-only">: Elements of AI (opens in a new tab)</span><span aria-hidden="true"> ↗</span></a>
         </div>
       </div>
     </div>
@@ -944,7 +951,7 @@
         <div class="cert-skills"><span>AI for business</span><span>AI for design</span><span>Productivity improvement</span></div>
         <div class="cert-id">Credential ID: c4a13047…f8a9f3b9</div>
         <div class="cert-actions">
-          <a class="btn-mini ghost" href="certs/genai-productivity-microsoft-linkedin.pdf" target="_blank" rel="noopener">Certificate<span class="sr-only">: Build Your Generative AI Productivity Skills (opens in a new tab)</span> ↗</a>
+          <a class="btn-mini ghost" href="certs/genai-productivity-microsoft-linkedin.pdf" target="_blank" rel="noopener">Certificate<span class="sr-only">: Build Your Generative AI Productivity Skills (opens in a new tab)</span><span aria-hidden="true"> ↗</span></a>
         </div>
       </div>
     </div>
@@ -958,7 +965,7 @@
         <div class="cert-skills"><span>AI prompting</span><span>Prompt engineering</span></div>
         <div class="cert-id">Credential ID: c132e691…8c6c647d</div>
         <div class="cert-actions">
-          <a class="btn-mini ghost" href="certs/prompt-engineering-generative-ai.pdf" target="_blank" rel="noopener">Certificate<span class="sr-only">: Introduction to Prompt Engineering for Generative AI (opens in a new tab)</span> ↗</a>
+          <a class="btn-mini ghost" href="certs/prompt-engineering-generative-ai.pdf" target="_blank" rel="noopener">Certificate<span class="sr-only">: Introduction to Prompt Engineering for Generative AI (opens in a new tab)</span><span aria-hidden="true"> ↗</span></a>
         </div>
       </div>
     </div>
@@ -971,7 +978,7 @@
       <div class="cert-body" id="cb-6">
         <div class="cert-skills"><span>Financial management</span></div>
         <div class="cert-actions">
-          <a class="btn-mini ghost" href="certs/financial-management-skills-nsdc.pdf" target="_blank" rel="noopener">Certificate<span class="sr-only">: Financial Management Skills (opens in a new tab)</span> ↗</a>
+          <a class="btn-mini ghost" href="certs/financial-management-skills-nsdc.pdf" target="_blank" rel="noopener">Certificate<span class="sr-only">: Financial Management Skills (opens in a new tab)</span><span aria-hidden="true"> ↗</span></a>
         </div>
       </div>
     </div>
@@ -1038,14 +1045,14 @@
     </nav>
     <nav class="sf-col" aria-label="Footer: elsewhere">
       <span class="sf-head">Elsewhere</span>
-      <a href="https://www.linkedin.com/in/berivishnuvardhanreddy" target="_blank" rel="noopener noreferrer">LinkedIn ↗<span class="sr-only">(opens in a new tab)</span></a>
-      <a href="https://github.com/berivishnu9-max" target="_blank" rel="noopener noreferrer">GitHub ↗<span class="sr-only">(opens in a new tab)</span></a>
-      <a href="cv.html" target="_blank" rel="noopener">CV ↗<span class="sr-only">(opens in a new tab)</span></a>
+      <a href="https://www.linkedin.com/in/berivishnuvardhanreddy" target="_blank" rel="noopener noreferrer">LinkedIn<span aria-hidden="true"> ↗</span><span class="sr-only"> (opens in a new tab)</span></a>
+      <a href="https://github.com/berivishnu9-max" target="_blank" rel="noopener noreferrer">GitHub<span aria-hidden="true"> ↗</span><span class="sr-only"> (opens in a new tab)</span></a>
+      <a href="cv.html" target="_blank" rel="noopener">CV<span aria-hidden="true"> ↗</span><span class="sr-only"> (opens in a new tab)</span></a>
     </nav>
   </div>
   <div class="sf-bottom">
     <span>© 2026 Beri Vishnu Vardhan Reddy</span>
-    <a href="#top" class="sf-top-link">Back to top ↑</a>
+    <a href="#top" class="sf-top-link">Back to top<span aria-hidden="true"> ↑</span></a>
   </div>
 </footer>
 
@@ -1338,8 +1345,11 @@ document.querySelectorAll('.g-card').forEach(c => {
 
 /* ================= Rolling-text links ================= */
 document.querySelectorAll('[data-roll]').forEach(el => {
-  const t = el.dataset.roll;
-  el.innerHTML = `<span class="roll"><i>${t}</i><i aria-hidden="true">${t}</i></span>`;
+  /* A leading or trailing arrow is decoration: keep it out of the link's name and the roll. */
+  const m = el.dataset.roll.match(/^([←↗↑→]\s*)?(.*?)(\s*[←↗↑→])?$/);
+  const t = m[2];
+  const icon = s => s ? `<span aria-hidden="true">${s.trim()}</span>` : '';
+  el.innerHTML = (m[1] ? icon(m[1]) + '&nbsp;' : '') + `<span class="roll"><i>${t}</i><i aria-hidden="true">${t}</i></span>` + (m[3] ? '&nbsp;' + icon(m[3]) : '');
 });
 
 /* ================= Scroll helpers (no libraries) ================= */
@@ -1399,7 +1409,13 @@ document.addEventListener('click', e => {
 /* Enter from the top, unless the URL points at a section (e.g. #certificates). */
 if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
 if (location.hash && document.querySelector(location.hash)) {
-  addEventListener('load', () => document.querySelector(location.hash).scrollIntoView({ block: 'start' }));
+  const go = () => { const t = document.querySelector(location.hash); if (t) t.scrollIntoView({ block: 'start' }); };
+  addEventListener('load', go);
+  const root = document.getElementById('root');
+  if (root && !root.firstChild) {
+    const mo = new MutationObserver(() => { if (root.firstChild) { mo.disconnect(); requestAnimationFrame(go); } });
+    mo.observe(root, { childList: true });
+  }
 } else {
   scrollTo(0, 0);
 }
@@ -1488,6 +1504,7 @@ if (location.hash && document.querySelector(location.hash)) {
   if (reduceMotion) { cards.forEach(c => c.style.display = 'none'); return; }
   const N = cards.length;
   const phrase = document.getElementById('g-phrase');
+  const stage = document.getElementById('gallery-stage');
   /* Each card settles into place on its own slight delay, no rotation,
      easing out on a long tail. Movement is small; the fade does the work. */
   const easeOut = t => 1 - Math.pow(1 - t, 3);
@@ -1496,7 +1513,7 @@ if (location.hash && document.querySelector(location.hash)) {
       const t = Math.max(0, Math.min(1, (p - i * 0.035) / 0.68));
       const e = easeOut(t);
       const angle = (i / N) * Math.PI * 2 - Math.PI / 2;
-      const radius = Math.min(vw(), vh()) * (.30 + p * .10);
+      const radius = Math.min(vw(), stage.offsetHeight) * (.30 + p * .10);
       const x = Math.cos(angle) * radius * 1.35 * e;
       const y = Math.sin(angle) * radius * e + (1 - e) * 26;
       card.style.transform = `translate(${x}px, ${y}px) scale(${.9 + e * .1})`;
@@ -1574,7 +1591,7 @@ function openDetail(id) {
     [["Year", p.year], ["Setting", m.setting], ["Team", m.team], ["Deliverable", m.deliverable]]
       .map(([l, v]) => `<div><span class="micro">${l}</span><b>${v}</b></div>`).join('');
   document.getElementById('d-body').innerHTML =
-    (DETAILS[id] || []).map(([h, t]) => `<span class="d-sec-h">${h}</span>` + (t.startsWith('<ul') ? t : `<p>${t}</p>`)).join('');
+    (DETAILS[id] || []).map(([h, t]) => `<h3 class="d-sec-h">${h}</h3>` + (t.startsWith('<ul') ? t : `<p>${t}</p>`)).join('');
   const illus = document.getElementById('d-illus');
   illus.setAttribute('role', 'img');
   illus.setAttribute('aria-label', 'Figure ' + String(ORDER.indexOf(id) + 1).padStart(2, '0') + ': ' + m.fig);
@@ -1615,7 +1632,10 @@ function closeDetail() {
   if (lastOpener && typeof lastOpener.focus === 'function') lastOpener.focus({ preventScroll: true });
 }
 document.querySelectorAll('.proj-item').forEach(i =>
-  i.addEventListener('click', () => openDetail(i.dataset.id)));
+  i.addEventListener('click', e => {
+    if (!e.target.closest('.proj-open')) i.querySelector('.proj-open').focus({ preventScroll: true });
+    openDetail(i.dataset.id);
+  }));
 dNext.addEventListener('click', () => openDetail(dNext.dataset.id));
 document.getElementById('d-back').addEventListener('click', closeDetail);
 addEventListener('keydown', e => { if (e.key === 'Escape' && detailOpen) closeDetail(); });
@@ -1649,8 +1669,22 @@ document.querySelectorAll('.cert-card').forEach(card => {
   if (!body) return;
   card.addEventListener('click', e => {
     if (e.target.closest('a')) return;
+    /* Inside an open body only the toggle closes it, so the ID can be selected and copied;
+       a click that just finished selecting text in this card is not a toggle either. */
+    if (!e.target.closest('.cert-toggle')) {
+      const sel = getSelection();
+      if (e.target.closest('.cert-body') || (sel && !sel.isCollapsed && card.contains(sel.anchorNode))) return;
+    }
     const open = card.classList.toggle('open');
-    body.style.maxHeight = open ? body.scrollHeight + 'px' : '0px';
+    if (open) {
+      body.style.maxHeight = body.scrollHeight + 'px';
+      /* Then let it size itself, so zoom or text spacing never clips it. */
+      setTimeout(() => { if (card.classList.contains('open')) body.style.maxHeight = 'none'; }, reduceMotion ? 0 : 420);
+    } else {
+      body.style.maxHeight = body.scrollHeight + 'px';
+      body.getBoundingClientRect(); // start the close from the real height
+      body.style.maxHeight = '0px';
+    }
     const toggle = card.querySelector('.cert-toggle');
     if (toggle) {
       toggle.setAttribute('aria-expanded', String(open));

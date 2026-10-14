@@ -27,8 +27,39 @@ export default function Navbar() {
       }
     }
     window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+
+    // The menu covers the page, so the page must not scroll behind it or stay in the
+    // accessibility tree: lock scrolling and make everything but the menu and its
+    // toggle inert, walking up from the menu to <body>.
+    const root = document.documentElement
+    const overflow = root.style.overflow
+    root.style.overflow = 'hidden'
+    const menu = menuRef.current
+    const toggle = toggleRef.current
+    const madeInert: HTMLElement[] = []
+    for (let el: HTMLElement | null = menu; el && el !== document.body; el = el.parentElement) {
+      for (const sib of Array.from(el.parentElement?.children ?? [])) {
+        if (!(sib instanceof HTMLElement) || sib === el || sib.inert) continue
+        if ((menu && sib.contains(menu)) || (toggle && sib.contains(toggle)) || sib.tagName === 'SCRIPT') continue
+        sib.inert = true
+        madeInert.push(sib)
+      }
+    }
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      root.style.overflow = overflow
+      madeInert.forEach((el) => (el.inert = false))
+    }
   }, [open])
+
+  // Widening past the phone layout hides the menu and its toggle: close it, or the
+  // focus handling above would keep trapping Tab on elements that are not shown.
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 768px)')
+    const onChange = () => mq.matches && setOpen(false)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
 
   const go = (e: React.MouseEvent<HTMLAnchorElement>) => {
     setOpen(false)

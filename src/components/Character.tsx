@@ -20,7 +20,8 @@ const HOLD_MS = 1300 // how long an expression stays up
 const IDLE_AFTER_MS = 3500
 const SLEEP_AFTER_MS = 30000
 const TOUCH_RELEASE_MS = 1200
-const HEAD_RADIUS = 0.24 // clickable circle round the face, x character height
+// Clickable ellipse round the whole head (hair to beard), as fractions of the character height.
+const HEAD = { cy: 0.43, rx: 0.27, ry: 0.31 }
 
 // Directions sheet order (row by row) and the compass angle each one stands for.
 const FRONT = 4
@@ -79,9 +80,12 @@ export default function Character({ heroRef }: { heroRef: React.RefObject<HTMLEl
 
       const resize = () => {
         const dpr = Math.min(window.devicePixelRatio || 1, 2)
-        canvas.width = Math.round(canvas.clientWidth * dpr)
-        canvas.height = Math.round(canvas.clientHeight * dpr)
-        dirty = true
+        const w = Math.round(canvas.clientWidth * dpr)
+        const h = Math.round(canvas.clientHeight * dpr)
+        if (w === canvas.width && h === canvas.height) return
+        canvas.width = w // resizing clears the bitmap...
+        canvas.height = h
+        paint(performance.now()) // ...so redraw before the browser paints, or it flashes blank
       }
 
       // --- Pose state ------------------------------------------------------------
@@ -120,17 +124,25 @@ export default function Character({ heroRef }: { heroRef: React.RefObject<HTMLEl
         return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom
       }
       const onHead = (x: number, y: number) => {
-        const f = faceAt()
-        return Math.hypot(x - f.x, y - f.y) < f.h * HEAD_RADIUS
+        const r = canvas.getBoundingClientRect()
+        const dx = (x - (r.left + r.width * faceX)) / (r.height * HEAD.rx)
+        const dy = (y - (r.top + r.height * HEAD.cy)) / (r.height * HEAD.ry)
+        return dx * dx + dy * dy < 1
       }
-      const track = (x: number, y: number) => {
+      // Something else is in the way: a link or button, or the open phone menu over the head.
+      const blocked = (target: EventTarget | null) =>
+        target instanceof Element &&
+        !!target.closest('a, button, input, textarea, select, [role="button"], #mobile-menu')
+      const updateCursor = (target: EventTarget | null = null) => {
+        hero.style.cursor = pointer && !blocked(target) && onHead(pointer.x, pointer.y) ? 'pointer' : ''
+      }
+      const track = (x: number, y: number, target: EventTarget | null = null) => {
         pointer = inHero(x, y) ? { x, y } : null
         lastActive = performance.now()
-        hero.style.cursor = pointer && onHead(x, y) ? 'pointer' : ''
+        updateCursor(target)
       }
       const react = (x: number, y: number, target: EventTarget | null) => {
-        if (target instanceof Element && target.closest('a, button, input, textarea, select, [role="button"]')) return
-        if (!onHead(x, y)) return
+        if (blocked(target) || !onHead(x, y)) return
         const now = performance.now()
         lastActive = now
         if (reaction === R.dizzy && now < reactionUntil) return // let him recover first
@@ -146,11 +158,20 @@ export default function Character({ heroRef }: { heroRef: React.RefObject<HTMLEl
         show(reaction, now)
       }
       const onMove = (e: PointerEvent) => {
-        if (e.pointerType !== 'touch') track(e.clientX, e.clientY)
+        if (e.pointerType !== 'touch') track(e.clientX, e.clientY, e.target)
       }
       const onDown = (e: PointerEvent) => {
-        if (e.pointerType !== 'touch') track(e.clientX, e.clientY)
-        if (e.button === 0) react(e.clientX, e.clientY, e.target)
+        if (e.pointerType !== 'touch') track(e.clientX, e.clientY, e.target)
+      }
+      // Expressions start on click, not pointerdown: a swipe that begins on the face is a
+      // scroll, and the browser sends no click for it. Keyboard-made clicks (detail 0) are
+      // for the buttons they land on.
+      const onClick = (e: MouseEvent) => {
+        if (e.button === 0 && e.detail > 0) react(e.clientX, e.clientY, e.target)
+      }
+      // Rapid clicks on the head (four make him dizzy) must not select the hero text.
+      const onMouseDown = (e: MouseEvent) => {
+        if (e.button === 0 && !blocked(e.target) && onHead(e.clientX, e.clientY)) e.preventDefault()
       }
       const onTouch = (e: TouchEvent) => {
         window.clearTimeout(releaseTimer)
@@ -166,9 +187,12 @@ export default function Character({ heroRef }: { heroRef: React.RefObject<HTMLEl
       }
       const onScroll = () => {
         if (pointer && !inHero(pointer.x, pointer.y)) pointer = null
+        updateCursor() // the head moved under a still mouse
       }
       window.addEventListener('pointermove', onMove, { passive: true })
       window.addEventListener('pointerdown', onDown, { passive: true })
+      window.addEventListener('click', onClick)
+      window.addEventListener('mousedown', onMouseDown)
       window.addEventListener('touchstart', onTouch, { passive: true })
       window.addEventListener('touchmove', onTouch, { passive: true })
       window.addEventListener('touchend', onTouchEnd, { passive: true })
@@ -187,16 +211,27 @@ export default function Character({ heroRef }: { heroRef: React.RefObject<HTMLEl
       let visible = true
       const io = new IntersectionObserver(([en]) => (visible = en.isIntersecting))
       io.observe(canvas)
-      resize()
       const ro = new ResizeObserver(resize)
       ro.observe(canvas)
+      // A move to a screen with another pixel ratio changes no CSS size, so watch for it.
+      let dprQuery: MediaQueryList | null = null
+      const watchDpr = () => {
+        dprQuery?.removeEventListener('change', onDpr)
+        dprQuery = window.matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`)
+        dprQuery.addEventListener('change', onDpr)
+      }
+      const onDpr = () => {
+        resize()
+        watchDpr()
+      }
+      watchDpr()
 
-      const drawFrame = (frame: number, alpha: number) => {
+      function drawFrame(frame: number, alpha: number) {
         if (alpha <= 0) return
         const sheet = frame < 9 ? dirs : reacts
         const i = frame % 9
-        ctx.globalAlpha = alpha
-        ctx.drawImage(sheet, (i % 3) * T, Math.floor(i / 3) * T, T, T, 0, 0, canvas.width, canvas.height)
+        ctx!.globalAlpha = alpha
+        ctx!.drawImage(sheet, (i % 3) * T, Math.floor(i / 3) * T, T, T, 0, 0, canvas!.width, canvas!.height)
       }
 
       const tick = (now: number) => {
@@ -245,27 +280,30 @@ export default function Character({ heroRef }: { heroRef: React.RefObject<HTMLEl
           if (now < blinkUntil && target === FRONT) target = R.blink
         }
         show(target, now, target === R.blink || shown === R.blink ? 55 : FADE_MS)
+        if (dirty || now - fadeStart < fadeMs) paint(now)
+      }
 
+      function paint(now: number) {
         const k = Math.min(1, (now - fadeStart) / fadeMs)
-        if (!dirty && k >= 1) return
-        ctx.clearRect(0, 0, canvas.width, canvas.height)
+        ctx!.clearRect(0, 0, canvas!.width, canvas!.height)
         if (k < 1 && from !== shown) {
           // 'lighter' adds the two premultiplied frames, so where both are opaque
           // the sum stays opaque: a true cross-dissolve with no see-through dip.
-          ctx.globalCompositeOperation = 'lighter'
+          ctx!.globalCompositeOperation = 'lighter'
           drawFrame(from, 1 - k)
           drawFrame(shown, k)
-          ctx.globalCompositeOperation = 'source-over'
+          ctx!.globalCompositeOperation = 'source-over'
         } else {
           drawFrame(shown, 1)
         }
-        ctx.globalAlpha = 1
+        ctx!.globalAlpha = 1
         dirty = k < 1
-        canvas.dataset.ready = '1'
-        if (canvas.parentElement) canvas.parentElement.dataset.ready = '1'
+        canvas!.dataset.ready = '1'
+        if (canvas!.parentElement) canvas!.parentElement.dataset.ready = '1'
         // Read-only snapshot for automated checks.
-        canvas.dataset.state = shown < 9 ? manifest.directions[shown] : manifest.reactions[shown - 9]
+        canvas!.dataset.state = shown < 9 ? manifest.directions[shown] : manifest.reactions[shown - 9]
       }
+      resize()
       raf = requestAnimationFrame(tick)
 
       cleanup = () => {
@@ -273,6 +311,9 @@ export default function Character({ heroRef }: { heroRef: React.RefObject<HTMLEl
         io.disconnect()
         window.removeEventListener('pointermove', onMove)
         window.removeEventListener('pointerdown', onDown)
+        window.removeEventListener('click', onClick)
+        window.removeEventListener('mousedown', onMouseDown)
+        dprQuery?.removeEventListener('change', onDpr)
         window.removeEventListener('touchstart', onTouch)
         window.removeEventListener('touchmove', onTouch)
         window.removeEventListener('touchend', onTouchEnd)
