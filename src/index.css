@@ -17,7 +17,7 @@
   animation: blink 1s step-end infinite;
 }
 
-/* Hero layout. Landscape: character centre-right, copy on the left over the red.
+/* Hero layout. Landscape: character centre-right, copy on the left over the charcoal.
    Portrait: character then copy, in normal flow, so they can never overlap. */
 .hero-section { position: relative; height: 100svh; min-height: 560px; overflow: hidden; }
 .hero-content {
@@ -25,36 +25,41 @@
   display: flex; flex-direction: column; justify-content: center;
 }
 
-/* Hero character (src/components/Character.tsx): square video frames on the
-   clip's own red; edges faded so the frame never shows as a box. */
+/* Hero character (src/components/Character.tsx): square transparent tiles with the
+   bust at the bottom, shoulders already dissolved at build time. */
 .character {
-  --fade-x: linear-gradient(to right, transparent, #000 10%, #000 90%, transparent);
-  --fade-y: linear-gradient(to bottom, transparent, #000 8%);
-  position: absolute; bottom: 0; left: 62%; transform: translateX(-50%);
+  position: absolute; bottom: 0; left: 68%; transform: translateX(-50%);
   aspect-ratio: 1 / 1;
-  height: min(92vh, 62vw);
-  -webkit-mask-image: var(--fade-x), var(--fade-y);
-  -webkit-mask-composite: source-in;
-  mask-image: var(--fade-x), var(--fade-y);
-  mask-composite: intersect;
+  height: min(76vh, 50vw);
 }
+/* Studio light behind the head: dark hair would otherwise sink into the charcoal. */
+.character::before {
+  content: ''; position: absolute; left: 50%; top: 45%; width: 120%; aspect-ratio: 1 / 1;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(closest-side, rgba(250, 249, 246, 0.13), rgba(212, 175, 55, 0.05) 55%, transparent);
+}
+/* A short gold rule above the eyebrow: the one ornament, in the accent colour. */
+.hero-eyebrow::before {
+  content: ''; display: block; width: 40px; height: 1px; margin-bottom: 18px; background: currentColor;
+}
+.character-poster { background-size: 300% 300%; background-position: 50% 50%; background-repeat: no-repeat; }
 .character canvas { opacity: 0; transition: opacity 0.2s ease; }
 .character canvas[data-ready] { opacity: 1; }
+.character[data-ready] .character-poster { visibility: hidden; }
 
 /* Squarer landscape screens (4:3, 3:2): smaller and further right, clear of the copy. */
 @media (min-aspect-ratio: 1/1) and (max-aspect-ratio: 3/2) {
-  .character { left: 68%; height: min(80vh, 56vw); }
+  .character { left: 71%; height: min(68vh, 46vw); }
 }
 
 @media (max-aspect-ratio: 1/1) {
   .hero-section { height: auto; min-height: 100svh; display: flex; flex-direction: column; }
   .character {
-    --fade-y: linear-gradient(to bottom, transparent, #000 8%, #000 60%, transparent 92%);
     position: relative; left: auto; bottom: auto; transform: none;
-    flex: none; margin: 56px auto 0;
-    width: min(100vw, 52svh); height: auto;
+    flex: none; margin: 64px auto 0;
+    width: min(92vw, 50svh); height: auto;
   }
-  .hero-content { position: relative; inset: auto; flex: 1; justify-content: flex-start; margin-top: -2svh; padding-bottom: 40px; }
+  .hero-content { position: relative; inset: auto; flex: 1; justify-content: flex-start; margin-top: -1svh; padding-bottom: 40px; }
 }
 
 /* Hero copy: a short rise on load; content is never held back for long. */

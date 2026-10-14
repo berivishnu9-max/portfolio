@@ -1,0 +1,29 @@
+{
+ "tile": 640,
+ "face": [
+  0.5,
+  0.451
+ ],
+ "directions": [
+  "up-left",
+  "up",
+  "up-right",
+  "left",
+  "front",
+  "right",
+  "down-left",
+  "down",
+  "down-right"
+ ],
+ "reactions": [
+  "blink",
+  "heart",
+  "sparkle",
+  "surprised",
+  "bright",
+  "bashful",
+  "sleepy",
+  "dizzy",
+  "delighted"
+ ]
+}

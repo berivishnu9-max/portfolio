@@ -8,7 +8,7 @@ export default function Hero() {
   return (
     <div className="hero-content pointer-events-none z-[1] px-5 sm:px-8 md:px-10">
       <div className="hero-copy pointer-events-auto relative z-10 max-w-[34rem] wide:max-w-[min(30rem,36vw)]">
-        <p className="hero-rise m-0 mb-4 text-[12px] font-medium uppercase tracking-[0.18em] text-canvas sm:text-[13px]">
+        <p className="hero-rise hero-eyebrow m-0 mb-4 text-[12px] font-medium uppercase tracking-[0.18em] text-gold sm:text-[13px]">
           {EYEBROW}
         </p>
         <h1
@@ -22,12 +22,12 @@ export default function Hero() {
           style={{ fontSize: 'clamp(1.05rem, 1.6vw, 1.3rem)', lineHeight: 1.5, animationDelay: '120ms' }}
         >
           {POSITIONING}{' '}
-          <em className="font-normal" style={{ fontFamily: 'var(--font-serif)', fontSize: '1.12em' }}>
+          <em className="font-normal text-gold" style={{ fontFamily: 'var(--font-serif)', fontSize: '1.12em' }}>
             {POSITIONING_ACCENT}
           </em>
         </p>
         <div className="hero-rise mt-7 flex flex-wrap items-center gap-3 sm:mt-8" style={{ animationDelay: '180ms' }}>
-          <a href="#work" onClick={scrollToHash} className={`${btn} bg-canvas text-charcoal hover:bg-charcoal hover:text-canvas`}>
+          <a href="#work" onClick={scrollToHash} className={`${btn} bg-gold text-charcoal hover:bg-canvas`}>
             View case studies
             <span aria-hidden="true">→</span>
           </a>
