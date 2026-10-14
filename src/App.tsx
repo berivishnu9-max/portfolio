@@ -6,7 +6,7 @@ import Hero from './components/Hero'
 export default function App() {
   const heroRef = useRef<HTMLElement>(null)
   return (
-    <section ref={heroRef} id="hero" className="relative h-screen overflow-hidden bg-crimson text-canvas">
+    <section ref={heroRef} id="hero" aria-label="Introduction" className="hero-section bg-crimson text-canvas">
       <Character heroRef={heroRef} />
       <Navbar />
       <Hero />

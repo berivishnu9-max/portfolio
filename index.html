@@ -15,13 +15,11 @@
 <meta name="twitter:card" content="summary">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://db.onlinewebfonts.com/c/5ac3fe7c6abd2f62067f266d89671492?family=HelveticaNowDisplay-Medium">
-<link rel="stylesheet" href="https://db.onlinewebfonts.com/c/1aa3377e489837a26d019bba501e779d?family=HelveticaNowDisplayW01-Rg">
 <style>
   :root{
     --bg:#FAF9F6;
     --fg:#2C302E;
-    --accent:#8A6D1A;--gold:#D4AF37;
+    --accent:#7A5F12;--gold:#D4AF37;
     --steel:#6B6F6D;
     --amber:#e3a23c;
     --red:#f07a2e;
@@ -31,9 +29,9 @@
     --dur:.95s;
     --dim:rgba(44,48,46,.72);
     --line:rgba(44,48,46,.24);
-    --font-body:'HelveticaNowDisplayW01-Rg','Helvetica Neue',Arial,sans-serif;
-    --font-display:'HelveticaNowDisplay-Medium','Helvetica Neue',Arial,sans-serif;
-    --font-accent:'HelveticaNowDisplayW01-Rg','Helvetica Neue',Arial,sans-serif;
+    --font-body:'Instrument Sans Variable','Helvetica Neue',Arial,sans-serif;
+    --font-display:'Instrument Sans Variable','Helvetica Neue',Arial,sans-serif;
+    --font-accent:'Instrument Serif',Georgia,serif;
   }
   *{margin:0;padding:0;box-sizing:border-box}
   html{scrollbar-width:thin;scrollbar-color:rgba(44,48,46,.25) transparent}
@@ -174,8 +172,12 @@
   .tn-links a.current{color:var(--accent)}
   @media(max-width:700px){
     .tn-name{display:none}
-    .tn-links{gap:13px}
-    .tn-links a{font-size:.68rem;letter-spacing:.1em}
+    /* One swipeable row with 44px-tall targets instead of two cramped lines. */
+    #topnav{padding-top:0;padding-bottom:0}
+    .tn-links{gap:18px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;width:100%;
+      -webkit-mask-image:linear-gradient(to right,#000 88%,transparent);mask-image:linear-gradient(to right,#000 88%,transparent)}
+    .tn-links::-webkit-scrollbar{display:none}
+    .tn-links a{font-size:.72rem;letter-spacing:.1em;white-space:nowrap;min-height:44px;display:inline-flex;align-items:center;padding:0}
   }
 
   /* ============ Hero ============ */
@@ -297,7 +299,7 @@
 
   /* ============ Work ============ */
   .work{padding:14vh 4vw 10vh;position:relative}
-  .sec-head{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:2vh}
+  .sec-head{display:flex;flex-wrap:wrap;gap:6px 21px;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:2vh}
   .sec-title{font-family:var(--font-display);font-weight:700;font-size:clamp(1.9rem,3.8vw,2.75rem);letter-spacing:-.02em}
   .proj-list{counter-reset:proj}
   .proj-item{
@@ -483,7 +485,7 @@
   .certs{padding:6vh 4vw 14vh}
   .cert-cat{margin-top:55px}
   .cert-cat>.micro{display:block;margin-bottom:21px;color:var(--steel)}
-  .cert-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:21px}
+  .cert-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(310px,100%),1fr));gap:21px}
   .cert-card{
     position:relative;border:1px solid var(--line);border-radius:13px;
     background:linear-gradient(160deg,rgba(44,48,46,.05),rgba(44,48,46,.015));
@@ -603,6 +605,9 @@
     position:fixed;right:18px;bottom:14px;z-index:45;
     font-size:.72rem;font-weight:600;letter-spacing:.22em;text-transform:uppercase;color:var(--dim);
   }
+  /* Corner labels sit on the off-white page, not on the red hero. */
+  #scroll-pct,#st-label{opacity:0;transition:opacity .3s ease}
+  body.past-hero #scroll-pct,body.past-hero #st-label{opacity:1}
 
   /* ============ Responsive ============ */
   @media(max-width:860px){
@@ -635,19 +640,43 @@
   @media(prefers-reduced-motion:reduce){
     *,*::before,*::after{animation:none!important;transition:none!important}
   }
+
+  /* ============ Footer ============ */
+  .site-footer{background:#2C302E;color:#FAF9F6;padding:var(--s6) 6vw var(--s4)}
+  .sf-top{display:grid;grid-template-columns:2fr 1fr 1fr;gap:var(--s5);padding-bottom:var(--s5);border-bottom:1px solid rgba(250,249,246,.16)}
+  .sf-name{font-family:var(--font-display);font-weight:600;font-size:clamp(1.6rem,3vw,2.4rem);letter-spacing:-.02em;line-height:1.1}
+  .sf-line{margin-top:var(--s2);color:rgba(250,249,246,.72);max-width:44ch;font-size:.95rem}
+  .sf-mail{display:inline-block;margin-top:var(--s3);color:#D4AF37;font-size:1.05rem;border-bottom:1px solid rgba(212,175,55,.5);padding-bottom:2px}
+  .sf-mail:hover{border-bottom-color:#D4AF37}
+  .sf-col{display:flex;flex-direction:column;gap:10px}
+  .sf-head{font-size:.72rem;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:rgba(250,249,246,.6);margin-bottom:6px}
+  .sf-col a{color:#FAF9F6;font-size:.98rem;width:fit-content;min-height:28px;display:inline-flex;align-items:center;
+    background:linear-gradient(#D4AF37,#D4AF37) 0 100%/0 1px no-repeat;transition:background-size .25s ease}
+  .sf-col a:hover,.sf-col a:focus-visible{background-size:100% 1px}
+  .sf-bottom{display:flex;justify-content:space-between;gap:var(--s3);flex-wrap:wrap;padding-top:var(--s3);font-size:.85rem;color:rgba(250,249,246,.6)}
+  .sf-top-link{color:#FAF9F6}
+  .sf-top-link:hover{color:#D4AF37}
+  .site-footer a:focus-visible{outline:2px solid #D4AF37;outline-offset:3px;border-radius:3px}
+  @media(max-width:860px){
+    .sf-top{grid-template-columns:1fr 1fr}
+    .sf-intro{grid-column:1/-1}
+  }
 </style>
 </head>
 <body>
 
 <!-- Preloader -->
 <div id="progress" aria-hidden="true"></div>
-<header id="topnav">
+<header id="topnav" inert>
   <a class="tn-name" href="#top">Beri Vishnu Vardhan Reddy</a>
   <nav class="tn-links" aria-label="Section navigation">
     <a href="#work">Work</a>
     <a href="#about">About</a>
-    <a href="cv.html" target="_blank" rel="noopener">Resume</a>
+    <a href="#skills">Skills</a>
+    <a href="#record">Experience</a>
+    <a href="#certificates">Certificates</a>
     <a href="#contact">Contact</a>
+    <a href="cv.html" target="_blank" rel="noopener">CV ↗<span class="sr-only">(opens in a new tab)</span></a>
   </nav>
 </header>
 
@@ -895,7 +924,7 @@
           <div class="cert-skills"><span>Power BI</span><span>Data preparation</span><span>Data modelling</span><span>Reporting &amp; visualisation</span></div>
           <div class="cert-id">Credential ID: 8628CAB135C1001B · Certification number: 0DE469-E6AQ18</div>
           <div class="cert-actions">
-            <a class="btn-mini ghost" href="certs/power-bi-data-analyst-pl300.pdf" target="_blank" rel="noopener">Certificate ↗</a>
+            <a class="btn-mini ghost" href="certs/power-bi-data-analyst-pl300.pdf" target="_blank" rel="noopener">Certificate<span class="sr-only">: Microsoft Certified: Power BI Data Analyst Associate (opens in a new tab)</span> ↗</a>
           </div>
         </div>
       </div>
@@ -909,7 +938,7 @@
           <div class="cert-skills"><span>Power BI</span><span>Data modelling</span></div>
           <div class="cert-id">Credential: coursera.org/verify/ADTL42P83I84</div>
           <div class="cert-actions">
-            <a class="btn-mini ghost" href="certs/power-bi-data-modeling.pdf" target="_blank" rel="noopener">Certificate ↗</a>
+            <a class="btn-mini ghost" href="certs/power-bi-data-modeling.pdf" target="_blank" rel="noopener">Certificate<span class="sr-only">: Data Modeling in Power BI (opens in a new tab)</span> ↗</a>
           </div>
         </div>
       </div>
@@ -929,7 +958,7 @@
           <div class="cert-skills"><span>AI fundamentals</span><span>Machine learning concepts</span><span>AI ethics</span></div>
           <div class="cert-id">Verification code: 9by0yomw5e (certificates.mooc.fi)</div>
           <div class="cert-actions">
-            <a class="btn-mini" href="certs/elements-of-ai.png" target="_blank" rel="noopener">Certificate ↗</a>
+            <a class="btn-mini" href="certs/elements-of-ai.png" target="_blank" rel="noopener">Certificate<span class="sr-only">: Elements of AI (opens in a new tab)</span> ↗</a>
           </div>
         </div>
       </div>
@@ -943,7 +972,7 @@
           <div class="cert-skills"><span>AI for business</span><span>AI for design</span><span>Productivity improvement</span></div>
           <div class="cert-id">Credential ID: c4a13047…f8a9f3b9</div>
           <div class="cert-actions">
-            <a class="btn-mini ghost" href="certs/genai-productivity-microsoft-linkedin.pdf" target="_blank" rel="noopener">Certificate ↗</a>
+            <a class="btn-mini ghost" href="certs/genai-productivity-microsoft-linkedin.pdf" target="_blank" rel="noopener">Certificate<span class="sr-only">: Build Your Generative AI Productivity Skills (opens in a new tab)</span> ↗</a>
           </div>
         </div>
       </div>
@@ -957,7 +986,7 @@
           <div class="cert-skills"><span>AI prompting</span><span>Prompt engineering</span></div>
           <div class="cert-id">Credential ID: c132e691…8c6c647d</div>
           <div class="cert-actions">
-            <a class="btn-mini ghost" href="certs/prompt-engineering-generative-ai.pdf" target="_blank" rel="noopener">Certificate ↗</a>
+            <a class="btn-mini ghost" href="certs/prompt-engineering-generative-ai.pdf" target="_blank" rel="noopener">Certificate<span class="sr-only">: Introduction to Prompt Engineering for Generative AI (opens in a new tab)</span> ↗</a>
           </div>
         </div>
       </div>
@@ -976,7 +1005,7 @@
         <div class="cert-body">
           <div class="cert-skills"><span>Financial management</span></div>
           <div class="cert-actions">
-            <a class="btn-mini ghost" href="certs/financial-management-skills-nsdc.pdf" target="_blank" rel="noopener">Certificate ↗</a>
+            <a class="btn-mini ghost" href="certs/financial-management-skills-nsdc.pdf" target="_blank" rel="noopener">Certificate<span class="sr-only">: Financial Management Skills (opens in a new tab)</span> ↗</a>
           </div>
         </div>
       </div>
@@ -1008,6 +1037,8 @@
         </p>
         <a class="c-action" href="mailto:berivishnu9@gmail.com">Email <span class="sym">↗</span></a>
         <a class="c-action" href="https://www.linkedin.com/in/berivishnuvardhanreddy" target="_blank" rel="noopener noreferrer">LinkedIn <span class="sym">↗</span></a>
+        <a class="c-action" href="https://github.com/berivishnu9-max" target="_blank" rel="noopener noreferrer">GitHub <span class="sym">↗</span></a>
+        <a class="c-action" href="cv.html" target="_blank" rel="noopener">CV <span class="sym">↗</span></a>
         <div class="c-action">Glasgow, United Kingdom <span class="sym">◦</span></div>
       </div>
       <div class="c-form c-slogan" data-reveal>
@@ -1023,6 +1054,34 @@
 </main>
 
 <!-- ============ FOOTER ============ -->
+<footer class="site-footer">
+  <div class="sf-top">
+    <div class="sf-intro">
+      <p class="sf-name">Beri Vishnu Vardhan Reddy</p>
+      <p class="sf-line">Business Analyst · MSc Business Analysis &amp; Consulting, University of Strathclyde · Glasgow, UK</p>
+      <a class="sf-mail" href="mailto:berivishnu9@gmail.com">berivishnu9@gmail.com</a>
+    </div>
+    <nav class="sf-col" aria-label="Footer: sections">
+      <span class="sf-head">Sections</span>
+      <a href="#work">Work</a>
+      <a href="#about">About</a>
+      <a href="#skills">Skills</a>
+      <a href="#record">Experience</a>
+      <a href="#certificates">Certificates</a>
+      <a href="#contact">Contact</a>
+    </nav>
+    <nav class="sf-col" aria-label="Footer: elsewhere">
+      <span class="sf-head">Elsewhere</span>
+      <a href="https://www.linkedin.com/in/berivishnuvardhanreddy" target="_blank" rel="noopener noreferrer">LinkedIn ↗<span class="sr-only">(opens in a new tab)</span></a>
+      <a href="https://github.com/berivishnu9-max" target="_blank" rel="noopener noreferrer">GitHub ↗<span class="sr-only">(opens in a new tab)</span></a>
+      <a href="cv.html" target="_blank" rel="noopener">CV ↗<span class="sr-only">(opens in a new tab)</span></a>
+    </nav>
+  </div>
+  <div class="sf-bottom">
+    <span>© 2026 Beri Vishnu Vardhan Reddy</span>
+    <a href="#top" class="sf-top-link">Back to top ↑</a>
+  </div>
+</footer>
 
 <!-- ============ DETAIL OVERLAY ============ -->
 <section id="detail" aria-modal="true" role="dialog" aria-label="Project detail" data-lenis-prevent tabindex="-1" inert aria-hidden="true">
@@ -1051,8 +1110,8 @@
   </div>
 </section>
 
-    <div id="scroll-pct">(0)</div>
-<div id="st-label">Beri Vishnu Vardhan Reddy · Portfolio</div>
+    <div id="scroll-pct" aria-hidden="true">(0)</div>
+<div id="st-label" aria-hidden="true">Beri Vishnu Vardhan Reddy · Portfolio</div>
 
 <script>
 /* ================= Data ================= */
@@ -1316,7 +1375,7 @@ document.querySelectorAll('.g-card').forEach(c => {
 /* ================= Rolling-text links ================= */
 document.querySelectorAll('[data-roll]').forEach(el => {
   const t = el.dataset.roll;
-  el.innerHTML = `<span class="roll"><i>${t}</i><i>${t}</i></span>`;
+  el.innerHTML = `<span class="roll"><i>${t}</i><i aria-hidden="true">${t}</i></span>`;
 });
 
 /* ================= Scroll helpers (no libraries) ================= */
@@ -1357,20 +1416,29 @@ function revealOnScroll(selector, stagger) {
   });
 }
 
-/* ================= Anchor links ================= */
-document.querySelectorAll('a[href^="#"]').forEach(a => {
-  a.addEventListener('click', e => {
-    const target = document.querySelector(a.getAttribute('href'));
-    if (!target) return;
-    e.preventDefault();
-    target.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
-  });
+/* ================= Anchor links (delegated: covers links added later) ================= */
+document.addEventListener('click', e => {
+  const a = e.target.closest && e.target.closest('a[href^="#"]');
+  if (!a || e.defaultPrevented) return;
+  const href = a.getAttribute('href');
+  if (href.length < 2) return;
+  const target = document.querySelector(href);
+  if (!target) return;
+  e.preventDefault();
+  target.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+  if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
+  target.focus({ preventScroll: true });
+  history.replaceState(null, '', href);
 });
 
-/* ================= Always enter from the top ================= */
+/* ================= Entry position ================= */
+/* Enter from the top, unless the URL points at a section (e.g. #certificates). */
 if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
-addEventListener('beforeunload', () => scrollTo(0, 0));
-scrollTo(0, 0);
+if (location.hash && document.querySelector(location.hash)) {
+  addEventListener('load', () => document.querySelector(location.hash).scrollIntoView({ block: 'start' }));
+} else {
+  scrollTo(0, 0);
+}
 
 /* ================= Intro sequence (CSS driven) ================= */
 (() => {
@@ -1658,7 +1726,10 @@ document.querySelectorAll('.cert-card').forEach(card => {
     const p = max > 0 ? Math.min(1, scrollY / max) : 0;
     bar.style.transform = `scaleX(${p})`;
     if (pct) pct.textContent = `(${Math.round(p * 100)})`;
-    nav.classList.toggle('show', scrollY > hero.offsetHeight * .7);
+    const past = scrollY > hero.offsetHeight * .7;
+    nav.classList.toggle('show', past);
+    nav.inert = !past; // off-screen header stays out of the tab order
+    document.body.classList.toggle('past-hero', past);
     let active = '';
     links.forEach(a => {
       const sec = document.querySelector(a.getAttribute('href'));

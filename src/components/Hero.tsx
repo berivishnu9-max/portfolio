@@ -1,116 +1,52 @@
-import { useEffect, useState } from 'react'
-import { useTypewriter } from '../hooks/useTypewriter'
-import { ACTIONS, EMAIL, INTRO, TYPED } from '../content'
+import { CV_URL, EYEBROW, FULL_NAME, POSITIONING, POSITIONING_ACCENT } from '../content'
+import { scrollToHash } from '../lib/scroll'
 
-const pill =
-  'inline-flex items-center justify-center rounded-full text-[13px] sm:text-[15px] px-4 sm:px-5 py-[0.3em] mx-[0.2em] mb-[0.4em] whitespace-nowrap transition-colors duration-200'
-
-function CopyIcon() {
-  return (
-    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-      <rect x="3.5" y="3.5" width="7" height="7" rx="1" stroke="currentColor" />
-      <path d="M8.5 1.5h-6a1 1 0 0 0-1 1v6" stroke="currentColor" />
-    </svg>
-  )
-}
+const btn =
+  'hero-btn inline-flex min-h-[44px] items-center justify-center gap-2 rounded-full px-6 text-[15px] font-medium no-underline transition-colors duration-200 sm:text-[16px]'
 
 export default function Hero() {
-  const { displayed, done } = useTypewriter(TYPED)
-  const [showActions, setShowActions] = useState(false)
-  const [copied, setCopied] = useState(false)
-
-  useEffect(() => {
-    const t = window.setTimeout(() => setShowActions(true), 400)
-    return () => window.clearTimeout(t)
-  }, [])
-
-  const copyEmail = async () => {
-    try {
-      await navigator.clipboard.writeText(EMAIL)
-      setCopied(true)
-      window.setTimeout(() => setCopied(false), 1800)
-    } catch {
-      window.location.href = `mailto:${EMAIL}`
-    }
-  }
-
   return (
-    <div className="pointer-events-none relative z-[1] flex h-screen flex-col justify-end overflow-hidden px-5 pb-12 sm:px-8 md:px-10 wide:justify-center wide:pb-0">
-      <div className="pointer-events-auto relative z-10 max-w-xl wide:max-w-[25rem]">
-        {/* Readable copy for screen readers and search engines; the blurred line is decorative. */}
-        <h1 className="sr-only">
-          Beri Vishnu Vardhan Reddy — Business Analyst. {INTRO[1]}. {TYPED}
-        </h1>
-
-        <div
-          aria-hidden="true"
-          className="pointer-events-none mb-5 select-none sm:mb-6"
-          style={{
-            fontSize: 'clamp(18px, 4vw, 26px)',
-            lineHeight: 1.3,
-            fontWeight: 400,
-            color: '#FAF9F6',
-            filter: 'blur(4px)',
-          }}
-        >
-          {INTRO[0]}
-          <br />
-          {INTRO[1]}
-        </div>
-
-        <p
-          aria-hidden="true"
-          className="mb-5 mt-0 text-canvas sm:mb-6"
-          style={{
-            fontSize: 'clamp(18px, 4vw, 26px)',
-            lineHeight: 1.35,
-            fontWeight: 400,
-            minHeight: 54,
-          }}
-        >
-          {displayed}
-          {!done && (
-            <span className="animate-blink ml-[2px] inline-block h-[1.1em] w-[2px] bg-canvas align-middle" />
-          )}
+    <div className="hero-content pointer-events-none z-[1] px-5 sm:px-8 md:px-10">
+      <div className="hero-copy pointer-events-auto relative z-10 max-w-[34rem] wide:max-w-[min(30rem,36vw)]">
+        <p className="hero-rise m-0 mb-4 text-[12px] font-medium uppercase tracking-[0.18em] text-canvas sm:text-[13px]">
+          {EYEBROW}
         </p>
-
-        <div
-          className="flex flex-wrap gap-y-1"
-          style={{
-            opacity: showActions ? 1 : 0,
-            transform: showActions ? 'translateY(0)' : 'translateY(8px)',
-            transition: 'opacity 0.4s ease, transform 0.4s ease',
-          }}
+        <h1
+          className="hero-rise m-0 font-semibold leading-[0.98] tracking-[-0.03em] text-canvas"
+          style={{ fontSize: 'clamp(2.2rem, 5.4vw, 4.75rem)', animationDelay: '60ms' }}
         >
-          {ACTIONS.map((action) => (
-            <a
-              key={action.label}
-              href={action.href}
-              {...(action.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
-              className={`${pill} border border-solid border-charcoal/15 bg-white text-charcoal no-underline hover:bg-charcoal hover:text-canvas`}
-            >
-              {action.label}
-            </a>
-          ))}
-          <button
-            type="button"
-            onClick={copyEmail}
-            className={`${pill} cursor-pointer gap-2 border border-solid border-canvas bg-transparent font-[inherit] text-canvas hover:bg-canvas hover:text-charcoal sm:gap-3`}
+          {FULL_NAME}
+        </h1>
+        <p
+          className="hero-rise mb-0 mt-5 text-canvas sm:mt-6"
+          style={{ fontSize: 'clamp(1.05rem, 1.6vw, 1.3rem)', lineHeight: 1.5, animationDelay: '120ms' }}
+        >
+          {POSITIONING}{' '}
+          <em className="font-normal" style={{ fontFamily: 'var(--font-serif)', fontSize: '1.12em' }}>
+            {POSITIONING_ACCENT}
+          </em>
+        </p>
+        <div className="hero-rise mt-7 flex flex-wrap items-center gap-3 sm:mt-8" style={{ animationDelay: '180ms' }}>
+          <a href="#work" onClick={scrollToHash} className={`${btn} bg-canvas text-charcoal hover:bg-charcoal hover:text-canvas`}>
+            View case studies
+            <span aria-hidden="true">→</span>
+          </a>
+          <a
+            href="#contact"
+            onClick={scrollToHash}
+            className={`${btn} border border-solid border-canvas/70 text-canvas hover:border-canvas hover:bg-canvas hover:text-charcoal`}
           >
-            <span>
-              {copied ? (
-                'Copied to clipboard'
-              ) : (
-                <>
-                  Reach me: <span className="underline underline-offset-1">{EMAIL}</span>
-                </>
-              )}
-            </span>
-            <CopyIcon />
-          </button>
-          <span className="sr-only" aria-live="polite">
-            {copied ? 'Email address copied' : ''}
-          </span>
+            Contact me
+          </a>
+          <a
+            href={CV_URL}
+            target="_blank"
+            rel="noopener"
+            className="hero-link inline-flex min-h-[44px] items-center px-2 text-[15px] font-medium text-canvas underline decoration-canvas/50 underline-offset-4 transition-colors hover:decoration-canvas sm:text-[16px]"
+          >
+            View CV<span className="sr-only"> (opens in a new tab)</span>
+            <span aria-hidden="true">&nbsp;↗</span>
+          </a>
         </div>
       </div>
     </div>

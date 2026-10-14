@@ -28,19 +28,27 @@ const base = `${import.meta.env.BASE_URL}character/`
 
 // Behaviour tuning.
 const EYE_TAU = 45 // ms: eyes lead...
-const HEAD_TAU = 240 // ms: ...the head follows
+const HEAD_FREQ = 1.6 // Hz: ...the head follows on a lightly damped spring
+const HEAD_DAMP = 0.86
 const MAX_YAW = 0.62 // rad of gaze that maps to the edge of the iris range
 const MAX_PITCH = 0.5
 const HEAD_SHARE = 0.32 // fraction of the gaze the head takes over
 const HEAD_MAX_X = 11 // px (art scale) head shift at full yaw
 const HEAD_MAX_Y = 6
 const TOUCH_RELEASE_MS = 1200
+const SHOULDER_SHARE = 0.22 // shoulders follow a fraction of the head shift
+const BREATH_PX = 1.8 // art px the upper body rises on an in-breath
+const BREATH_MS = 4600 // average breath period
+const IDLE_AFTER_MS = 2500 // with no pointer, start occasional idle glances
 
 // Head region for the warp, in art pixels (measured on the frame).
 const HEAD_C = [765, 470]
 const HEAD_R = [430, 480]
 const NOSE = [752, 600]
 const NECK_Y = [830, 950]
+// Upper-body region: everything above BODY_Y[0] moves with the shoulders and
+// breathing; the effect fades to nothing at the bottom edge of the art.
+const BODY_Y = [900, 1290]
 
 const VERT = `
 attribute vec2 aPos;
@@ -58,6 +66,7 @@ uniform sampler2D uEyes;
 uniform vec2 uSize;      // art size in px
 uniform vec4 uEyesRect;  // x, y, w, h in px
 uniform vec2 uHead;      // head shift in px
+uniform vec2 uBody;      // shoulder + breathing shift in px
 void main() {
   vec2 p = vUv * uSize;
   // Weight: 1 on the head, 0 on the neck, shirt and background.
@@ -66,7 +75,9 @@ void main() {
   w *= 1.0 - smoothstep(${NECK_Y[0]}.0, ${NECK_Y[1]}.0, p.y);
   // Pseudo-depth: the nose and eyes move more than the outline -> a turn, not a slide.
   float depth = 0.45 + 0.55 * (1.0 - smoothstep(0.0, 1.0, length((p - vec2(${NOSE[0]}.0, ${NOSE[1]}.0)) / 360.0)));
-  vec2 src = p - uHead * w * depth;
+  // One smooth displacement field, so head, neck and shoulders never separate.
+  float body = 1.0 - smoothstep(${BODY_Y[0]}.0, ${BODY_Y[1]}.0, p.y);
+  vec2 src = p - uBody * body - uHead * w * depth;
   vec2 q = (src - uEyesRect.xy) / uEyesRect.zw;
   vec4 c = texture2D(uBase, src / uSize);
   if (q.x >= 0.0 && q.y >= 0.0 && q.x <= 1.0 && q.y <= 1.0) {
@@ -170,6 +181,7 @@ export default function Character({ heroRef }: { heroRef: React.RefObject<HTMLEl
       gl.uniform2f(u('uSize'), meta.width, meta.height)
       gl.uniform4f(u('uEyesRect'), ex0, ey0, eyeCanvas.width, eyeCanvas.height)
       const uHead = u('uHead')
+      const uBody = u('uBody')
 
       const resize = () => {
         const dpr = Math.min(window.devicePixelRatio || 1, 2)
@@ -184,6 +196,7 @@ export default function Character({ heroRef }: { heroRef: React.RefObject<HTMLEl
       // --- Input ---------------------------------------------------------------
       // Pointer position in viewport px, or null when it is outside the hero.
       let pointer: { x: number; y: number } | null = null
+      let lastActive = performance.now()
       let releaseTimer = 0
       const inHero = (x: number, y: number) => {
         const r = hero.getBoundingClientRect()
@@ -191,6 +204,7 @@ export default function Character({ heroRef }: { heroRef: React.RefObject<HTMLEl
       }
       const track = (x: number, y: number) => {
         pointer = inHero(x, y) ? { x, y } : null
+        lastActive = performance.now()
       }
       // Mouse and pen use pointer events. Touch uses touch events, which keep
       // firing while the browser pans (pointer events are cancelled then).
@@ -252,6 +266,15 @@ export default function Character({ heroRef }: { heroRef: React.RefObject<HTMLEl
       let gazeYaw = 0
       let gazePitch = 0
       let headYaw = 0
+      let headYawV = 0
+      let headPitchV = 0
+      // Idle behaviour: occasional small glances, often back to the viewer.
+      let idleYaw = 0
+      let idlePitch = 0.04
+      let idleNext = 0
+      // Breathing: phase advances with a slightly varying period.
+      let breathPhase = Math.random() * Math.PI * 2
+      let breathPeriod = BREATH_MS
       let headPitch = 0
       let prev = performance.now()
       let visible = true
@@ -273,8 +296,16 @@ export default function Character({ heroRef }: { heroRef: React.RefObject<HTMLEl
         // Target gaze angles, per eye, from the pointer (or rest).
         let tYaw = 0
         let tPitch = 0
+        const motionOn = !reduceMotion.matches
+        if (!pointer && motionOn && now - lastActive > IDLE_AFTER_MS && now > idleNext) {
+          const toViewer = Math.random() < 0.45
+          idleYaw = toViewer ? 0 : (Math.random() * 2 - 1) * 0.16
+          idlePitch = toViewer ? 0.04 : -0.05 + Math.random() * 0.13
+          idleNext = now + 1800 + Math.random() * 2700
+        }
+        const idle = !pointer && motionOn && now - lastActive > IDLE_AFTER_MS
         const perEye = eyes.map((e) => {
-          if (!pointer) return [0, 0.04] // natural rest: at the viewer, a touch low
+          if (!pointer) return idle ? [idleYaw, idlePitch] : [0, 0.04] // rest: at the viewer, a touch low
           const ex = rect.left + e.iris[0] * scale
           const ey = rect.top + e.iris[1] * scale
           return [Math.atan2(pointer.x - ex, dist), Math.atan2(pointer.y - ey, dist)]
@@ -285,9 +316,16 @@ export default function Character({ heroRef }: { heroRef: React.RefObject<HTMLEl
         })
 
         // Head takes a share of the gaze, slowly; eyes cover the rest, quickly.
-        const headOn = !reduceMotion.matches
-        headYaw = expApproach(headYaw, headOn ? tYaw * HEAD_SHARE : 0, dt, HEAD_TAU)
-        headPitch = expApproach(headPitch, headOn ? tPitch * HEAD_SHARE : 0, dt, HEAD_TAU)
+        // Damped spring: settles naturally with a hint of follow-through.
+        const w0 = 2 * Math.PI * HEAD_FREQ
+        const step = (x: number, v: number, target: number) => {
+          const h = dt / 1000
+          const a = w0 * w0 * (target - x) - 2 * HEAD_DAMP * w0 * v
+          const nv = v + a * h
+          return [x + nv * h, nv]
+        }
+        ;[headYaw, headYawV] = step(headYaw, headYawV, motionOn ? tYaw * HEAD_SHARE : 0)
+        ;[headPitch, headPitchV] = step(headPitch, headPitchV, motionOn ? tPitch * HEAD_SHARE : 0)
         gazeYaw = expApproach(gazeYaw, tYaw, dt, EYE_TAU)
         gazePitch = expApproach(gazePitch, tPitch, dt, EYE_TAU)
 
@@ -333,15 +371,26 @@ export default function Character({ heroRef }: { heroRef: React.RefObject<HTMLEl
         gl.activeTexture(gl.TEXTURE1)
         gl.bindTexture(gl.TEXTURE_2D, eyeTex)
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, eyeCanvas)
-        gl.uniform2f(
-          uHead,
-          Math.max(-1, Math.min(1, headYaw / (MAX_YAW * HEAD_SHARE))) * HEAD_MAX_X,
-          Math.max(-1, Math.min(1, headPitch / (MAX_PITCH * HEAD_SHARE))) * HEAD_MAX_Y,
-        )
+        const hx = Math.max(-1, Math.min(1, headYaw / (MAX_YAW * HEAD_SHARE))) * HEAD_MAX_X
+        const hy = Math.max(-1, Math.min(1, headPitch / (MAX_PITCH * HEAD_SHARE))) * HEAD_MAX_Y
+        gl.uniform2f(uHead, hx, hy)
+        // Shoulders follow the head a little; breathing lifts the upper body.
+        let breath = 0
+        if (motionOn) {
+          breathPhase += (dt / breathPeriod) * Math.PI * 2
+          if (breathPhase > Math.PI * 2) {
+            breathPhase -= Math.PI * 2
+            breathPeriod = BREATH_MS * (0.85 + Math.random() * 0.3)
+          }
+          breath = -BREATH_PX * (0.5 - 0.5 * Math.cos(breathPhase))
+        }
+        const bx = hx * SHOULDER_SHARE
+        const by = hy * SHOULDER_SHARE * 0.5 + breath
+        gl.uniform2f(uBody, bx, by)
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
         canvas.dataset.ready = '1'
         // Exposed for automated checks only (read-only snapshot).
-        canvas.dataset.state = `${eyes.map((e) => `${e.ox.toFixed(1)},${e.oy.toFixed(1)}`).join(';')}|${headYaw.toFixed(3)},${headPitch.toFixed(3)}|${lidIndex}`
+        canvas.dataset.state = `${eyes.map((e) => `${e.ox.toFixed(1)},${e.oy.toFixed(1)}`).join(';')}|${headYaw.toFixed(3)},${headPitch.toFixed(3)}|${lidIndex}|${bx.toFixed(2)},${by.toFixed(2)}`
       }
       raf = requestAnimationFrame(tick)
 
@@ -373,7 +422,7 @@ export default function Character({ heroRef }: { heroRef: React.RefObject<HTMLEl
   return (
     <div
       aria-hidden="true"
-      className="character pointer-events-none absolute bottom-0 left-1/2 z-0 -translate-x-1/2"
+      className="character pointer-events-none z-0"
     >
       <img
         src={`${base}poster.webp`}

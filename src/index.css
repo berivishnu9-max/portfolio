@@ -4,7 +4,8 @@
 
 /* --font-body and the page colours are defined by the portfolio styles in index.html. */
 :root {
-  --font-heading: 'HelveticaNowDisplay-Medium', 'Helvetica Neue', Arial, sans-serif;
+  --font-heading: 'Instrument Sans Variable', 'Helvetica Neue', Arial, sans-serif;
+  --font-serif: 'Instrument Serif', Georgia, serif;
 }
 
 @keyframes blink {
@@ -16,11 +17,20 @@
   animation: blink 1s step-end infinite;
 }
 
+/* Hero layout. Landscape: character centre-right, copy on the left over the red.
+   Portrait: character then copy, in normal flow, so they can never overlap. */
+.hero-section { position: relative; height: 100svh; min-height: 560px; overflow: hidden; }
+.hero-content {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; justify-content: center;
+}
+
 /* Hero character (src/components/Character.tsx). The art's backdrop is this red;
    its edges are faded because the art's red is not perfectly uniform. */
 .character {
   --fade-x: linear-gradient(to right, transparent, #000 9%, #000 91%, transparent);
   --fade-y: linear-gradient(to bottom, transparent, #000 10%);
+  position: absolute; bottom: 0; left: 59%; transform: translateX(-50%);
   aspect-ratio: 1504 / 1290;
   height: min(88vh, calc(100vw * 1290 / 1504));
   -webkit-mask-image: var(--fade-x), var(--fade-y);
@@ -28,17 +38,49 @@
   mask-image: var(--fade-x), var(--fade-y);
   mask-composite: intersect;
 }
-
 .character canvas { opacity: 0; transition: opacity 0.2s ease; }
 .character canvas[data-ready] { opacity: 1; }
 
-/* Portrait screens: character across the top, copy below on the red. */
+/* Squarer landscape screens (4:3, 3:2): smaller and further right, clear of the copy. */
+@media (min-aspect-ratio: 1/1) and (max-aspect-ratio: 3/2) {
+  .character { left: 66%; height: min(78vh, calc(62vw * 1290 / 1504)); }
+}
+
 @media (max-aspect-ratio: 1/1) {
+  .hero-section { height: auto; min-height: 100svh; display: flex; flex-direction: column; }
   .character {
-    --fade-y: linear-gradient(to bottom, transparent, #000 8%, #000 72%, transparent);
-    top: 52px;
-    bottom: auto;
-    height: auto;
-    width: min(100vw, calc(60vh * 1504 / 1290));
+    --fade-y: linear-gradient(to bottom, transparent, #000 8%, #000 60%, transparent 92%);
+    position: relative; left: auto; bottom: auto; transform: none;
+    flex: none; margin: 56px auto 0;
+    width: min(100vw, calc(50svh * 1504 / 1290)); height: auto;
   }
+  .hero-content { position: relative; inset: auto; flex: 1; justify-content: flex-start; margin-top: -2svh; padding-bottom: 40px; }
+}
+
+/* Hero copy: a short rise on load; content is never held back for long. */
+@keyframes hero-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+.hero-rise { animation: hero-rise 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+
+/* Nav links: underline that grows from the left. */
+.nav-link {
+  background: linear-gradient(currentColor, currentColor) 0 100% / 0 1px no-repeat;
+  transition: background-size 0.25s ease;
+  padding-bottom: 2px;
+}
+.nav-link:hover, .nav-link:focus-visible { background-size: 100% 1px; }
+
+/* Visible focus on the red hero. */
+#hero a:focus-visible, #hero button:focus-visible, #mobile-menu a:focus-visible {
+  outline: 2px solid #FAF9F6;
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+#mobile-menu a:focus-visible { outline-color: #2C302E; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-rise { animation: none; }
+  .nav-link { transition: none; }
 }
