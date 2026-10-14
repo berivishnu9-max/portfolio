@@ -4,16 +4,20 @@ import { useEffect, useRef } from 'react'
  * Cursor-following character drawn from two 3x3 sheets (tools/build-mascot.py):
  * nine head directions and nine expressions. The pointer's angle from the face
  * picks one of eight directions, or the front-facing pose when it is close to the
- * face. Consecutive poses cross-fade, so a turn reads as a movement rather than a
- * cut. Clicking or tapping the head plays an expression. Every frame shares the
- * same shoulders (aligned at build time), so only the head and face change.
- * One requestAnimationFrame loop, which only draws while something is changing.
+ * face. Consecutive poses cross-fade. Clicking or tapping the head plays an expression.
+ *
+ * To make him feel alive between those drawings, each frame is split at the neck:
+ * the shoulders are drawn still, and the head layer above them moves continuously -
+ * it eases toward the pointer, tilts the way it looks, sways and bobs a little when
+ * idle, and bounces when clicked - on springs, so every motion is smooth. Every frame
+ * shares the same shoulders (aligned at build time), so the body never moves.
+ * One requestAnimationFrame loop; it pauses when the hero is off screen.
  */
 
 type Manifest = { tile: number; face: [number, number]; directions: string[]; reactions: string[] }
 
 const base = `${import.meta.env.BASE_URL}mascot/`
-const FADE_MS = 120 // cross-fade between two poses
+const FADE_MS = 160 // cross-fade between two poses
 const DEAD_ZONE = 0.14 // pointer this close to the face (x character height) = look at the viewer
 const STICKY = (12 * Math.PI) / 180 // keep the current direction until the pointer is this far past its sector edge
 const HOLD_MS = 1300 // how long an expression stays up
@@ -22,6 +26,20 @@ const SLEEP_AFTER_MS = 30000
 const TOUCH_RELEASE_MS = 1200
 // Clickable ellipse round the whole head (hair to beard), as fractions of the character height.
 const HEAD = { cy: 0.43, rx: 0.27, ry: 0.31 }
+// The head layer is fully the head above NECK.top and fully the (still) body below
+// NECK.bottom; it turns about PIVOT, at the base of the neck, where nothing visibly moves.
+const NECK = { top: 0.66, bottom: 0.8 }
+const PIVOT = { x: 0.5, y: 0.8 }
+// How far the head leans toward the pointer: shift as a fraction of the size, tilt in degrees.
+const LEAN = { x: 0.012, y: 0.01, roll: 2.5 }
+const SPRING = { w: 9, z: 0.72 } // natural frequency (rad/s) and damping: smooth, with a little life
+
+type Spring = { x: number; v: number }
+function stepSpring(s: Spring, target: number, dt: number) {
+  const a = SPRING.w * SPRING.w * (target - s.x) - 2 * SPRING.z * SPRING.w * s.v
+  s.v += a * dt
+  s.x += s.v * dt
+}
 
 // Directions sheet order (row by row) and the compass angle each one stands for.
 const FRONT = 4
@@ -78,13 +96,34 @@ export default function Character({ heroRef }: { heroRef: React.RefObject<HTMLEl
       const T = manifest.tile
       const [faceX, faceY] = manifest.face
 
+      // Offscreen layers: the cross-faded frame, then its head and body halves.
+      const layer = () => {
+        const c = document.createElement('canvas')
+        return [c, c.getContext('2d')!] as const
+      }
+      const [frameC, fctx] = layer()
+      const [headC, hctx] = layer()
+      const [bodyC, bctx] = layer()
+      let headMask: CanvasGradient | null = null
+      let bodyMask: CanvasGradient | null = null
+
       const resize = () => {
         const dpr = Math.min(window.devicePixelRatio || 1, 2)
         const w = Math.round(canvas.clientWidth * dpr)
         const h = Math.round(canvas.clientHeight * dpr)
         if (w === canvas.width && h === canvas.height) return
-        canvas.width = w // resizing clears the bitmap...
-        canvas.height = h
+        for (const c of [canvas, frameC, headC, bodyC]) {
+          c.width = w // resizing clears the bitmap...
+          c.height = h
+        }
+        const g = (from: number, to: number) => {
+          const m = hctx.createLinearGradient(0, h * NECK.top, 0, h * NECK.bottom)
+          m.addColorStop(0, `rgba(0,0,0,${from})`)
+          m.addColorStop(1, `rgba(0,0,0,${to})`)
+          return m
+        }
+        headMask = g(1, 0)
+        bodyMask = g(0, 1)
         paint(performance.now()) // ...so redraw before the browser paints, or it flashes blank
       }
 
@@ -99,6 +138,12 @@ export default function Character({ heroRef }: { heroRef: React.RefObject<HTMLEl
       let reactionUntil = 0
       const clicks: number[] = []
       let clickTurn = 0
+      // Continuous head motion, each axis on its own spring.
+      const sx: Spring = { x: 0, v: 0 }
+      const sy: Spring = { x: 0, v: 0 }
+      const sr: Spring = { x: 0, v: 0 }
+      let prev = performance.now()
+      const t0 = prev
 
       const show = (frame: number, now: number, ms = FADE_MS) => {
         if (frame === shown) return
@@ -156,6 +201,7 @@ export default function Character({ heroRef }: { heroRef: React.RefObject<HTMLEl
         }
         reactionUntil = now + (reaction === R.dizzy ? HOLD_MS + 600 : HOLD_MS)
         show(reaction, now)
+        if (!reduceMotion.matches) sy.v -= 0.09 // the head pops up a little, then settles
       }
       const onMove = (e: PointerEvent) => {
         if (e.pointerType !== 'touch') track(e.clientX, e.clientY, e.target)
@@ -230,14 +276,25 @@ export default function Character({ heroRef }: { heroRef: React.RefObject<HTMLEl
         if (alpha <= 0) return
         const sheet = frame < 9 ? dirs : reacts
         const i = frame % 9
-        ctx!.globalAlpha = alpha
-        ctx!.drawImage(sheet, (i % 3) * T, Math.floor(i / 3) * T, T, T, 0, 0, canvas!.width, canvas!.height)
+        fctx.globalAlpha = alpha
+        fctx.drawImage(sheet, (i % 3) * T, Math.floor(i / 3) * T, T, T, 0, 0, frameC.width, frameC.height)
       }
 
       const tick = (now: number) => {
         raf = requestAnimationFrame(tick)
+        const dt = Math.min(0.05, (now - prev) / 1000)
+        prev = now
         if (!visible) return
         const motionOn = !reduceMotion.matches
+
+        // Where the head leans: toward the pointer, continuously (not just per pose).
+        let lx = 0
+        let ly = 0
+        if (pointer && motionOn && !(reaction >= 0 && now < reactionUntil)) {
+          const f = faceAt()
+          lx = Math.max(-1, Math.min(1, (pointer.x - f.x) / (window.innerWidth * 0.5)))
+          ly = Math.max(-1, Math.min(1, (pointer.y - f.y) / (window.innerHeight * 0.5)))
+        }
 
         // Which pose should be up right now?
         let target = FRONT
@@ -269,6 +326,9 @@ export default function Character({ heroRef }: { heroRef: React.RefObject<HTMLEl
               idleNext = now + 1800 + Math.random() * 2800
             }
             target = idlePose
+            // glances lean the same way the face turns
+            lx = idlePose === 3 || idlePose === 0 ? -0.5 : idlePose === 5 || idlePose === 2 ? 0.5 : 0
+            ly = idlePose === 0 || idlePose === 2 ? -0.4 : 0
           } else {
             lookDir = FRONT
           }
@@ -280,28 +340,80 @@ export default function Character({ heroRef }: { heroRef: React.RefObject<HTMLEl
           if (now < blinkUntil && target === FRONT) target = R.blink
         }
         show(target, now, target === R.blink || shown === R.blink ? 55 : FADE_MS)
-        if (dirty || now - fadeStart < fadeMs) paint(now)
+
+        if (motionOn) {
+          // A slow, uneven sway and bob, so he never freezes; smaller while he is looking at something.
+          const t = (now - t0) / 1000
+          const calm = pointer ? 0.5 : 1
+          const sway = calm * (Math.sin(t * 1.21) * 0.7 + Math.sin(t * 0.53 + 1.3) * 0.3)
+          const bob = calm * Math.sin(t * 1.63 + 0.4) * 0.004
+          const dizzy = reaction === R.dizzy && now < reactionUntil ? Math.sin(t * 9) * 4 : 0
+          stepSpring(sx, lx * LEAN.x, dt)
+          stepSpring(sy, ly * LEAN.y + bob, dt)
+          stepSpring(sr, lx * LEAN.roll + sway + dizzy, dt)
+          paint(now)
+        } else {
+          sx.x = sy.x = sr.x = sx.v = sy.v = sr.v = 0
+          if (dirty || now - fadeStart < fadeMs) paint(now)
+        }
       }
 
+      let layersFor = '' // which frame mix the head/body layers currently hold
       function paint(now: number) {
         const k = Math.min(1, (now - fadeStart) / fadeMs)
-        ctx!.clearRect(0, 0, canvas!.width, canvas!.height)
-        if (k < 1 && from !== shown) {
-          // 'lighter' adds the two premultiplied frames, so where both are opaque
-          // the sum stays opaque: a true cross-dissolve with no see-through dip.
-          ctx!.globalCompositeOperation = 'lighter'
-          drawFrame(from, 1 - k)
-          drawFrame(shown, k)
-          ctx!.globalCompositeOperation = 'source-over'
-        } else {
-          drawFrame(shown, 1)
+        const w = canvas!.width
+        const h = canvas!.height
+        // The layers only change when the pose does; a moving head just re-composites them.
+        const mix = k < 1 && from !== shown ? `${from}>${shown}@${k.toFixed(3)}` : `${shown}`
+        const key = `${mix}|${w}x${h}`
+        if (key !== layersFor) {
+          layersFor = key
+          buildLayers(k, w, h)
         }
-        ctx!.globalAlpha = 1
+        ctx!.clearRect(0, 0, w, h)
+        ctx!.drawImage(bodyC, 0, 0)
+        const px = w * PIVOT.x
+        const py = h * PIVOT.y
+        ctx!.save()
+        ctx!.translate(px + sx.x * w, py + sy.x * h)
+        ctx!.rotate((sr.x * Math.PI) / 180)
+        ctx!.translate(-px, -py)
+        ctx!.drawImage(headC, 0, 0)
+        ctx!.restore()
         dirty = k < 1
         canvas!.dataset.ready = '1'
         if (canvas!.parentElement) canvas!.parentElement.dataset.ready = '1'
         // Read-only snapshot for automated checks.
         canvas!.dataset.state = shown < 9 ? manifest.directions[shown] : manifest.reactions[shown - 9]
+        canvas!.dataset.head = `${(sx.x * w).toFixed(1)},${(sy.x * h).toFixed(1)},${sr.x.toFixed(2)}`
+      }
+
+      function buildLayers(k: number, w: number, h: number) {
+        fctx.clearRect(0, 0, w, h)
+        if (k < 1 && from !== shown) {
+          // 'lighter' adds the two premultiplied frames, so where both are opaque
+          // the sum stays opaque: a true cross-dissolve with no see-through dip.
+          fctx.globalCompositeOperation = 'lighter'
+          drawFrame(from, 1 - k)
+          drawFrame(shown, k)
+          fctx.globalCompositeOperation = 'source-over'
+        } else {
+          drawFrame(shown, 1)
+        }
+        fctx.globalAlpha = 1
+
+        // Split at the neck with complementary masks: untransformed, they add back up
+        // to exactly the frame.
+        for (const [c, mask] of [[hctx, headMask], [bctx, bodyMask]] as const) {
+          c.clearRect(0, 0, w, h)
+          c.drawImage(frameC, 0, 0)
+          if (mask) {
+            c.globalCompositeOperation = 'destination-in'
+            c.fillStyle = mask
+            c.fillRect(0, 0, w, h)
+            c.globalCompositeOperation = 'source-over'
+          }
+        }
       }
       resize()
       raf = requestAnimationFrame(tick)

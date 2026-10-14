@@ -17,7 +17,8 @@ clicked, then the case studies, about, skills, experience, certificates and cont
   the hand-made sheets in `tools/mascot-src/` by `tools/build-mascot.py` (keys out the red background, mirrors
   the damaged right-facing cells from their left-facing twins, keeps the shoulders still across every pose and
   expression, builds the blink); played by `src/components/Character.tsx`, which turns the head toward the
-  cursor and plays an expression when the head is clicked or tapped. Rebuild with
+  cursor, keeps the head moving on springs (it leans and tilts toward the pointer, sways when idle, bounces
+  when clicked; the shoulders never move) and plays an expression when the head is clicked or tapped. Rebuild with
   `python3 tools/build-mascot.py` (needs Pillow, NumPy and SciPy).
 - `public/certs/`, `public/me.jpg` — certificates and profile photo
 
