@@ -13,7 +13,7 @@ case studies, skills, experience, certificates and contact sections below it.
 - `src/` — the hero (React, TypeScript, Vite, Tailwind CSS); copy and links live in `src/content.ts`
 - `public/cv.html` — CV, printable to PDF
 - `public/work.html` — redirect so old `work.html` links still land on the right section
-- `public/character/` — layered hero character (eyes, irises, lids) built from one front-facing frame by `tools/build-character.py`; animated by `src/components/Character.tsx`
+- `public/face/` — hero character frames (left/right/up/down/blink paths from a Veo clip) built by `tools/build-veo-character.py`; played by `src/components/Character.tsx`
 - `public/certs/`, `public/me.jpg` — certificates and profile photo
 
 Palette: canvas `#FAF9F6`, charcoal `#2C302E`, gold `#D4AF37` for fills, deep gold `#8A6D1A` for gold text.

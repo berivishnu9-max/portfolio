@@ -1,122 +1,35 @@
 import { useEffect, useRef } from 'react'
 
 /*
- * Cursor-tracking character built from layered 2D art (tools/build-character.py),
- * not a rigged 3D model:
- *   - irises are separate discs, moved per eye toward the pointer and clipped
- *     to the eye openings; the real upper lids are drawn over them
- *   - blinks sweep a sprite of the real lid skin and lash line down and up
- *   - the head turns and tilts by a small depth-weighted image warp in WebGL;
- *     the warp is zero from the neck down, so torso, shoulders, clothing and
- *     background never move
- *   - expressions are small local warps of the real art: brows lift (gaze up,
- *     occasional interest, slightly asymmetric) or settle (focus), and the
- *     lower lids rise a touch for warmth; eyes add tiny fixation movements
- * Everything is driven from one requestAnimationFrame loop. No React state
- * changes after mount.
+ * Cursor-following character played from real video frames (tools/build-veo-character.py).
+ * Each direction is a "path" of frames that starts at the same front-facing
+ * pose and runs out to an extreme (left, right, up, down). The pointer picks the
+ * dominant direction and how far along it to go; the head eases along the path
+ * and only changes path when it is back near the centre, so it never cuts
+ * between two different poses. Neighbouring frames are cross-faded for
+ * sub-frame smoothness. Blinks play the blink path forwards and back.
+ * One requestAnimationFrame loop; no React state after mount.
  */
 
-type Eye = {
-  box: [number, number, number, number]
-  iris: [number, number]
-  radius: number
-  irisSize: number
-  highlights: [number, number, number][]
-  rangeX: number
-  rangeUp: number
-  rangeDown: number
-}
-type Meta = { width: number; height: number; lidSteps: number; eyes: Eye[] }
+type Manifest = { size: number; backdrop: string; paths: Record<string, string[]> }
+type Dir = 'left' | 'right' | 'up' | 'down'
 
-const base = `${import.meta.env.BASE_URL}character/`
-
-// Behaviour tuning.
-const EYE_TAU = 45 // ms: eyes lead...
-const HEAD_FREQ = 1.6 // Hz: ...the head follows on a lightly damped spring
-const HEAD_DAMP = 0.86
-const MAX_YAW = 0.62 // rad of gaze that maps to the edge of the iris range
-const MAX_PITCH = 0.5
-const HEAD_SHARE = 0.32 // fraction of the gaze the head takes over
-const HEAD_MAX_X = 11 // px (art scale) head shift at full yaw
-const HEAD_MAX_Y = 6
+const base = `${import.meta.env.BASE_URL}face/`
+const EASE_MS = 120 // how quickly the head follows the pointer
+const SWITCH_AT = 0.06 // path changes only below this extent (near the centre)
+const DEAD_ZONE = 0.08 // pointer this close to the face centre means "look at me"
+const IDLE_AFTER_MS = 3000
 const TOUCH_RELEASE_MS = 1200
-const IDLE_AFTER_MS = 2500 // with no pointer, start occasional idle glances
-const HEAD_ROLL = 0.06 // rad of head tilt per rad of head yaw (people tilt as they turn)
-const EXPR_TAU = 140 // ms: brows and lids ease into expressions
-
-// Head region for the warp, in art pixels (measured on the frame).
-const HEAD_C = [765, 470]
-const HEAD_R = [430, 480]
-const NOSE = [752, 600]
-const NECK_Y = [830, 950]
-const PIVOT = [765, 900] // head tilts about the top of the neck
-// Facial features moved by small local warps of the real art (measured).
-const BROW_L = [612, 403]
-const BROW_R = [890, 410]
-const BROW_RAD = [115, 34]
-const LOWLID_L = [626, 530]
-const LOWLID_R = [880, 542]
-const LOWLID_RAD = [78, 18]
-
-const VERT = `
-attribute vec2 aPos;
-varying vec2 vUv;
-void main() {
-  vUv = vec2(aPos.x * 0.5 + 0.5, 0.5 - aPos.y * 0.5);
-  gl_Position = vec4(aPos, 0.0, 1.0);
-}`
-
-const FRAG = `
-precision mediump float;
-varying vec2 vUv;
-uniform sampler2D uBase;
-uniform sampler2D uEyes;
-uniform vec2 uSize;      // art size in px
-uniform vec4 uEyesRect;  // x, y, w, h in px
-uniform vec2 uHead;      // head shift in px
-uniform float uRoll;     // head tilt in rad
-uniform vec2 uBrow;      // left/right brow lift in px (negative lowers)
-uniform float uLowLid;   // lower-lid rise in px
-float bump(vec2 p, vec2 c, vec2 r) { vec2 d = (p - c) / r; return exp(-dot(d, d)); }
-void main() {
-  vec2 p = vUv * uSize;
-  // Weight: 1 on the head, 0 on the neck, shirt and background.
-  float e = length((p - vec2(${HEAD_C[0]}.0, ${HEAD_C[1]}.0)) / vec2(${HEAD_R[0]}.0, ${HEAD_R[1]}.0));
-  float w = 1.0 - smoothstep(0.78, 1.08, e);
-  w *= 1.0 - smoothstep(${NECK_Y[0]}.0, ${NECK_Y[1]}.0, p.y);
-  // Pseudo-depth: the nose and eyes move more than the outline -> a turn, not a slide.
-  float depth = 0.45 + 0.55 * (1.0 - smoothstep(0.0, 1.0, length((p - vec2(${NOSE[0]}.0, ${NOSE[1]}.0)) / 360.0)));
-  // Head only: shift with depth plus a small tilt about the neck. The weight
-  // is zero from the neck down, so shoulders, shirt and background never move.
-  vec2 src = p - uHead * w * depth;
-  float a = -uRoll * w;
-  vec2 d0 = src - vec2(${PIVOT[0]}.0, ${PIVOT[1]}.0);
-  src = vec2(${PIVOT[0]}.0, ${PIVOT[1]}.0) + vec2(cos(a) * d0.x - sin(a) * d0.y, sin(a) * d0.x + cos(a) * d0.y);
-  // Expressions: brows and lower lids slide a few px on the face.
-  src.y += uBrow.x * bump(src, vec2(${BROW_L[0]}.0, ${BROW_L[1]}.0), vec2(${BROW_RAD[0]}.0, ${BROW_RAD[1]}.0));
-  src.y += uBrow.y * bump(src, vec2(${BROW_R[0]}.0, ${BROW_R[1]}.0), vec2(${BROW_RAD[0]}.0, ${BROW_RAD[1]}.0));
-  src.y += uLowLid * (bump(src, vec2(${LOWLID_L[0]}.0, ${LOWLID_L[1]}.0), vec2(${LOWLID_RAD[0]}.0, ${LOWLID_RAD[1]}.0))
-                    + bump(src, vec2(${LOWLID_R[0]}.0, ${LOWLID_R[1]}.0), vec2(${LOWLID_RAD[0]}.0, ${LOWLID_RAD[1]}.0)));
-  vec2 q = (src - uEyesRect.xy) / uEyesRect.zw;
-  vec4 c = texture2D(uBase, src / uSize);
-  if (q.x >= 0.0 && q.y >= 0.0 && q.x <= 1.0 && q.y <= 1.0) {
-    vec4 eyes = texture2D(uEyes, q);
-    c = vec4(mix(c.rgb, eyes.rgb, eyes.a), 1.0);
-  }
-  gl_FragColor = vec4(c.rgb, 1.0);
-}`
 
 function loadImage(src: string) {
   return new Promise<HTMLImageElement>((resolve, reject) => {
     const img = new Image()
+    img.decoding = 'async'
     img.onload = () => resolve(img)
     img.onerror = reject
     img.src = src
   })
 }
-
-const expApproach = (cur: number, target: number, dt: number, tau: number) =>
-  cur + (target - cur) * (1 - Math.exp(-dt / tau))
 
 export default function Character({ heroRef }: { heroRef: React.RefObject<HTMLElement> }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -125,97 +38,36 @@ export default function Character({ heroRef }: { heroRef: React.RefObject<HTMLEl
     const canvas = canvasRef.current
     const hero = heroRef.current
     if (!canvas || !hero) return
-    const gl = canvas.getContext('webgl', { antialias: false, alpha: false, premultipliedAlpha: false })
-    if (!gl) return // the static poster stays visible
+    const ctx = canvas.getContext('2d', { alpha: false })
+    if (!ctx) return
 
     let disposed = false
     let raf = 0
+    let cleanup = () => {}
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
 
     const run = async () => {
-      const meta: Meta = await fetch(`${base}character.json`).then((r) => r.json())
-      const [baseImg, ...layers] = await Promise.all([
-        loadImage(`${base}base.webp`),
-        ...meta.eyes.flatMap((_, n) =>
-          ['iris', 'open', 'shade', 'lid'].map((k) => loadImage(`${base}${k}-${n}.png`)),
-        ),
-      ])
+      const manifest: Manifest = await fetch(`${base}manifest.json`).then((r) => r.json())
+      const names = Object.keys(manifest.paths)
+      const loaded = await Promise.all(
+        names.map((n) => Promise.all(manifest.paths[n].map((f) => loadImage(`${base}${f}`)))),
+      )
       if (disposed) return
-      const eyes = meta.eyes.map((e, n) => {
-        const [irisImg, openImg, shadeImg, lidImg] = layers.slice(n * 4, n * 4 + 4)
-        const scratch = document.createElement('canvas')
-        scratch.width = e.box[2]
-        scratch.height = e.box[3]
-        return {
-          ...e, irisImg, openImg, shadeImg, lidImg, scratch, sctx: scratch.getContext('2d')!,
-          ox: 0, oy: 0, // current iris offset (px)
-        }
-      })
-
-      // Offscreen canvas holding just the eye region; uploaded each frame.
-      const ex0 = Math.min(...eyes.map((e) => e.box[0]))
-      const ey0 = Math.min(...eyes.map((e) => e.box[1]))
-      const ex1 = Math.max(...eyes.map((e) => e.box[0] + e.box[2]))
-      const ey1 = Math.max(...eyes.map((e) => e.box[1] + e.box[3]))
-      const eyeCanvas = document.createElement('canvas')
-      eyeCanvas.width = ex1 - ex0
-      eyeCanvas.height = ey1 - ey0
-      const ectx = eyeCanvas.getContext('2d')!
-
-      // --- WebGL setup ---------------------------------------------------------
-      const compile = (type: number, src: string) => {
-        const s = gl.createShader(type)!
-        gl.shaderSource(s, src)
-        gl.compileShader(s)
-        if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s) ?? 'shader')
-        return s
-      }
-      const prog = gl.createProgram()!
-      gl.attachShader(prog, compile(gl.VERTEX_SHADER, VERT))
-      gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, FRAG))
-      gl.linkProgram(prog)
-      gl.useProgram(prog)
-      const buf = gl.createBuffer()
-      gl.bindBuffer(gl.ARRAY_BUFFER, buf)
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW)
-      const aPos = gl.getAttribLocation(prog, 'aPos')
-      gl.enableVertexAttribArray(aPos)
-      gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0)
-      const texture = (unit: number, src: TexImageSource) => {
-        const t = gl.createTexture()
-        gl.activeTexture(gl.TEXTURE0 + unit)
-        gl.bindTexture(gl.TEXTURE_2D, t)
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, src)
-        return t
-      }
-      texture(0, baseImg)
-      const eyeTex = texture(1, eyeCanvas)
-      const u = (name: string) => gl.getUniformLocation(prog, name)
-      gl.uniform1i(u('uBase'), 0)
-      gl.uniform1i(u('uEyes'), 1)
-      gl.uniform2f(u('uSize'), meta.width, meta.height)
-      gl.uniform4f(u('uEyesRect'), ex0, ey0, eyeCanvas.width, eyeCanvas.height)
-      const uHead = u('uHead')
-      const uRoll = u('uRoll')
-      const uBrow = u('uBrow')
-      const uLowLid = u('uLowLid')
+      const paths = Object.fromEntries(names.map((n, i) => [n, loaded[i]])) as Record<string, HTMLImageElement[]>
+      // Decode up front so the first move never stutters.
+      await Promise.all(Object.values(paths).flat().map((im) => im.decode().catch(() => {})))
+      if (disposed) return
 
       const resize = () => {
         const dpr = Math.min(window.devicePixelRatio || 1, 2)
         canvas.width = Math.round(canvas.clientWidth * dpr)
         canvas.height = Math.round(canvas.clientHeight * dpr)
-        gl.viewport(0, 0, canvas.width, canvas.height)
       }
       resize()
       const ro = new ResizeObserver(resize)
       ro.observe(canvas)
 
-      // --- Input ---------------------------------------------------------------
-      // Pointer position in viewport px, or null when it is outside the hero.
+      // --- Input -------------------------------------------------------------
       let pointer: { x: number; y: number } | null = null
       let lastActive = performance.now()
       let releaseTimer = 0
@@ -227,8 +79,6 @@ export default function Character({ heroRef }: { heroRef: React.RefObject<HTMLEl
         pointer = inHero(x, y) ? { x, y } : null
         lastActive = performance.now()
       }
-      // Mouse and pen use pointer events. Touch uses touch events, which keep
-      // firing while the browser pans (pointer events are cancelled then).
       const onMove = (e: PointerEvent) => {
         if (e.pointerType !== 'touch') track(e.clientX, e.clientY)
       }
@@ -254,239 +104,114 @@ export default function Character({ heroRef }: { heroRef: React.RefObject<HTMLEl
       window.addEventListener('blur', onLeave)
       window.addEventListener('scroll', onScroll, { passive: true })
 
-      // --- Blinks --------------------------------------------------------------
-      // Human-like: mostly every 2-6 s (skewed), sometimes a quick double blink.
-      // Each blink gets its own speed so they never look machine-timed.
-      let CLOSE_MS = 75
-      let HOLD_MS = 35
-      let OPEN_MS = 125
-      const vary = () => {
-        CLOSE_MS = 62 + Math.random() * 30
-        HOLD_MS = 20 + Math.random() * 40
-        OPEN_MS = 105 + Math.random() * 60
-      }
-      const nextGap = () => Math.min(7000, Math.max(1300, 1600 - Math.log(Math.random()) * 1900))
-      let blinkAt = performance.now() + 900 + Math.random() * 1500
+      // --- Blinks: varied gaps, occasional double, never mid-turn ----------------
+      const blinkFrames = paths.blink ?? []
+      const nextGap = () => Math.min(7000, Math.max(1800, 2000 - Math.log(Math.random()) * 2200))
+      let blinkAt = performance.now() + 1500 + Math.random() * 2000
       let blinkStart = -1
+      let blinkDur = 260
       let doubleQueued = false
-      const lidAmount = (now: number) => {
-        if (blinkStart < 0 && now >= blinkAt) {
-          blinkStart = now
-          vary()
-        }
-        if (blinkStart < 0) return 0
-        const t = now - blinkStart
-        if (t < CLOSE_MS) return t / CLOSE_MS
-        if (t < CLOSE_MS + HOLD_MS) return 1
-        if (t < CLOSE_MS + HOLD_MS + OPEN_MS) return 1 - (t - CLOSE_MS - HOLD_MS) / OPEN_MS
-        blinkStart = -1
-        lastBlinkEnd = now
-        if (!doubleQueued && Math.random() < 0.16) {
-          doubleQueued = true
-          blinkAt = now + 110 + Math.random() * 90
-        } else {
-          doubleQueued = false
-          blinkAt = now + nextGap()
-        }
-        return 0
-      }
 
-      // People often blink with a large change of gaze.
-      let lastBlinkEnd = 0
-      const maybeGazeBlink = (now: number) => {
-        if (blinkStart < 0 && now - lastBlinkEnd > 1200 && Math.random() < 0.35) blinkAt = now
-      }
-
-      // --- Expressions ----------------------------------------------------------
-      // Rare, small, mostly asymmetric: attentive interest (brows up), warmth
-      // (lower lids rise a touch), concentration (brows settle down a little).
-      type Expr = { brow: number; asym: number; lowLid: number; start: number; dur: number }
-      let expr: Expr | null = null
-      let exprNext = performance.now() + 4000 + Math.random() * 4000
-      const startExpr = (now: number, kind: 'interest' | 'warm' | 'focus') => {
-        const asym = 0.7 + Math.random() * 0.3
-        expr =
-          kind === 'interest'
-            ? { brow: 2.6 + Math.random() * 1.2, asym, lowLid: 0, start: now, dur: 1300 + Math.random() * 700 }
-            : kind === 'warm'
-              ? { brow: 0.8, asym, lowLid: 1.5 + Math.random() * 0.6, start: now, dur: 1800 + Math.random() * 900 }
-              : { brow: -1.3, asym, lowLid: 0.6, start: now, dur: 1500 + Math.random() * 800 }
-      }
-      const envelope = (t: number, dur: number) => {
-        if (t < 0 || t > dur) return 0
-        const attack = 260
-        const release = 520
-        if (t < attack) return 0.5 - 0.5 * Math.cos((Math.PI * t) / attack)
-        if (t > dur - release) return 0.5 + 0.5 * Math.cos((Math.PI * (t - (dur - release))) / release)
-        return 1
-      }
-      let browL = 0
-      let browR = 0
-      let lowLid = 0
-      let roll = 0
-      let rollV = 0
-      // Fixation micro-movements: tiny eye offsets that change every so often.
-      let microX = 0
-      let microY = 0
-      let microNext = 0
-      let wasPointer = false
-
-      // --- Loop ----------------------------------------------------------------
-      let gazeYaw = 0
-      let gazePitch = 0
-      let headYaw = 0
-      let headYawV = 0
-      let headPitchV = 0
-      // Idle behaviour: occasional small glances, often back to the viewer.
-      let idleYaw = 0
-      let idlePitch = 0.04
+      // --- State ---------------------------------------------------------------
+      let dir: Dir = 'left'
+      let extent = 0 // 0 = centre, 1 = end of the current path
+      let idleDir: Dir = 'left'
+      let idleExt = 0
       let idleNext = 0
-      let headPitch = 0
       let prev = performance.now()
       let visible = true
       const io = new IntersectionObserver(([en]) => (visible = en.isIntersecting))
       io.observe(canvas)
+
+      const draw = (img: HTMLImageElement, alpha: number) => {
+        ctx.globalAlpha = alpha
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+      }
 
       const tick = (now: number) => {
         raf = requestAnimationFrame(tick)
         const dt = Math.min(64, now - prev)
         prev = now
         if (!visible) return
-
-        // Screen geometry of the art (the canvas shows the whole art, letterbox-free).
-        const rect = canvas.getBoundingClientRect()
-        const scale = rect.width / meta.width
-        // Viewing distance: ~2 face-widths, so a cursor on the face is a real angle.
-        const dist = 2.1 * 620 * scale
-
-        // Target gaze angles, per eye, from the pointer (or rest).
-        let tYaw = 0
-        let tPitch = 0
         const motionOn = !reduceMotion.matches
-        if (!pointer && motionOn && now - lastActive > IDLE_AFTER_MS && now > idleNext) {
-          maybeGazeBlink(now)
-          const toViewer = Math.random() < 0.45
-          idleYaw = toViewer ? 0 : (Math.random() * 2 - 1) * 0.16
-          idlePitch = toViewer ? 0.04 : -0.05 + Math.random() * 0.13
-          idleNext = now + 1800 + Math.random() * 2700
-        }
-        const idle = !pointer && motionOn && now - lastActive > IDLE_AFTER_MS
-        const perEye = eyes.map((e) => {
-          if (!pointer) return idle ? [idleYaw, idlePitch] : [0, 0.04] // rest: at the viewer, a touch low
-          const ex = rect.left + e.iris[0] * scale
-          const ey = rect.top + e.iris[1] * scale
-          return [Math.atan2(pointer.x - ex, dist), Math.atan2(pointer.y - ey, dist)]
-        })
-        perEye.forEach(([y, p]) => {
-          tYaw += y / perEye.length
-          tPitch += p / perEye.length
-        })
 
-        // Head takes a share of the gaze, slowly; eyes cover the rest, quickly.
-        // Damped spring: settles naturally with a hint of follow-through.
-        const w0 = 2 * Math.PI * HEAD_FREQ
-        const step = (x: number, v: number, target: number) => {
-          const h = dt / 1000
-          const a = w0 * w0 * (target - x) - 2 * HEAD_DAMP * w0 * v
-          const nv = v + a * h
-          return [x + nv * h, nv]
-        }
-        ;[headYaw, headYawV] = step(headYaw, headYawV, motionOn ? tYaw * HEAD_SHARE : 0)
-        ;[headPitch, headPitchV] = step(headPitch, headPitchV, motionOn ? tPitch * HEAD_SHARE : 0)
-        // A big jump in where the eyes need to look sometimes brings a blink.
-        if (Math.hypot(tYaw - gazeYaw, tPitch - gazePitch) > 0.45) maybeGazeBlink(now)
-        gazeYaw = expApproach(gazeYaw, tYaw, dt, EYE_TAU)
-        gazePitch = expApproach(gazePitch, tPitch, dt, EYE_TAU)
-
-        // Head tilt follows the turn, with a faint slow drift so it is never frozen.
-        const drift = motionOn ? 0.006 * Math.sin(now / 2900) + 0.004 * Math.sin(now / 1700 + 1.3) : 0
-        ;[roll, rollV] = step(roll, rollV, motionOn ? -headYaw * HEAD_ROLL * 2 + drift : 0)
-
-        // Fixation micro-movements (sub-pixel to ~0.7px), refreshed at irregular intervals.
-        if (motionOn && now > microNext) {
-          microX = (Math.random() * 2 - 1) * 0.7
-          microY = (Math.random() * 2 - 1) * 0.45
-          microNext = now + 450 + Math.random() * 1100
+        // Target direction and extent from the pointer, relative to the face.
+        let tDir: Dir = dir
+        let tExt = 0
+        if (pointer && motionOn) {
+          const r = canvas.getBoundingClientRect()
+          const fx = r.left + r.width * 0.5
+          const fy = r.top + r.height * 0.3
+          const dx = (pointer.x - fx) / Math.max(1, window.innerWidth * 0.45)
+          const dy = (pointer.y - fy) / Math.max(1, window.innerHeight * 0.45)
+          const mag = Math.hypot(dx, dy)
+          if (mag > DEAD_ZONE) {
+            tDir = Math.abs(dx) >= Math.abs(dy) * 1.15 ? (dx < 0 ? 'left' : 'right') : dy < 0 ? 'up' : 'down'
+            tExt = Math.min(1, (mag - DEAD_ZONE) / (1 - DEAD_ZONE))
+          }
+        } else if (motionOn && now - lastActive > IDLE_AFTER_MS) {
+          // Idle: an occasional small glance, mostly back to the viewer.
+          if (now > idleNext) {
+            const r = Math.random()
+            idleDir = r < 0.4 ? 'left' : r < 0.75 ? 'right' : 'up'
+            idleExt = Math.random() < 0.45 ? 0 : 0.25 + Math.random() * 0.3
+            idleNext = now + 2000 + Math.random() * 3000
+          }
+          tDir = idleDir
+          tExt = idleExt
         }
 
-        // Expressions: an acknowledging brow lift when someone arrives, warmth when
-        // the pointer rests on the face, otherwise rare small events.
-        if (motionOn) {
-          // Expressions stay occasional: at least 4 s of neutral between them.
-          const rested = !expr || now - expr.start > expr.dur + 4000
-          if (pointer && !wasPointer && rested) startExpr(now, 'interest')
-          const onFace = pointer && Math.abs(tYaw) < 0.12 && Math.abs(tPitch) < 0.12
-          if (rested) {
-            if (onFace && Math.random() < dt / 5000) startExpr(now, 'warm')
-            else if (now > exprNext) {
-              const r = Math.random()
-              startExpr(now, r < 0.45 ? 'interest' : r < 0.75 ? 'focus' : 'warm')
-              exprNext = now + 6000 + Math.random() * 8000
+        // Only switch path through the centre; otherwise head back first.
+        if (tDir !== dir) {
+          if (extent < SWITCH_AT) dir = tDir
+          else tExt = 0
+        }
+        extent += (tExt - extent) * (1 - Math.exp(-dt / EASE_MS))
+
+        const frames = paths[dir]
+        const pos = extent * (frames.length - 1)
+        const i0 = Math.floor(pos)
+        const i1 = Math.min(frames.length - 1, i0 + 1)
+        const mix = pos - i0
+
+        // Blink only when the head is near the centre (the blink frames are frontal).
+        if (blinkStart < 0 && now >= blinkAt) {
+          if (extent < 0.15 && motionOn && blinkFrames.length) {
+            blinkStart = now
+            blinkDur = 220 + Math.random() * 90
+          } else blinkAt = now + 400
+        }
+        let blinkImg: HTMLImageElement | null = null
+        let blinkAlpha = 0
+        if (blinkStart >= 0) {
+          const t = (now - blinkStart) / blinkDur
+          if (t >= 1) {
+            blinkStart = -1
+            if (!doubleQueued && Math.random() < 0.15) {
+              doubleQueued = true
+              blinkAt = now + 120 + Math.random() * 100
+            } else {
+              doubleQueued = false
+              blinkAt = now + nextGap()
             }
+          } else {
+            // Close fast, open a little slower.
+            const k = t < 0.4 ? t / 0.4 : 1 - (t - 0.4) / 0.6
+            const bp = k * (blinkFrames.length - 1)
+            blinkImg = blinkFrames[Math.round(bp)]
+            blinkAlpha = Math.min(1, extent < 0.15 ? 1 : 0)
           }
         }
-        wasPointer = !!pointer
-        const env = expr ? envelope(now - expr.start, expr.dur) : 0
-        // Brows also lift a little when looking up, as they naturally do.
-        const lookUp = Math.max(0, -gazePitch) * 4
-        const tBrowL = motionOn ? lookUp + (expr ? expr.brow * env : 0) : 0
-        const tBrowR = motionOn ? lookUp + (expr ? expr.brow * env * expr.asym : 0) : 0
-        browL = expApproach(browL, tBrowL, dt, EXPR_TAU)
-        browR = expApproach(browR, tBrowR, dt, EXPR_TAU)
-        lowLid = expApproach(lowLid, motionOn && expr ? expr.lowLid * env : 0, dt, EXPR_TAU)
 
-        const lid = lidAmount(now)
-        const lidIndex = Math.round(Math.min(1, Math.max(0, lid)) * (meta.lidSteps - 1))
+        ctx.globalAlpha = 1
+        draw(frames[i0], 1)
+        if (mix > 0.02 && i1 !== i0) draw(frames[i1], mix)
+        if (blinkImg) draw(blinkImg, blinkAlpha)
+        ctx.globalAlpha = 1
 
-        ectx.clearRect(0, 0, eyeCanvas.width, eyeCanvas.height)
-        eyes.forEach((e, n) => {
-          // Each eye aims from its own position (slight convergence near the face),
-          // minus what the head has already turned. tanh keeps edges natural.
-          const yawE = gazeYaw + (perEye[n][0] - tYaw) - headYaw
-          const pitE = gazePitch + (perEye[n][1] - tPitch) - headPitch
-          const gx = Math.tanh(yawE / MAX_YAW)
-          const gy = Math.tanh(pitE / MAX_PITCH)
-          e.ox = gx * e.rangeX + microX
-          e.oy = gy * (gy > 0 ? e.rangeDown : e.rangeUp) + microY
-
-          const [bx, by, bw, bh] = e.box
-          const s = e.sctx
-          s.globalCompositeOperation = 'source-over'
-          s.clearRect(0, 0, bw, bh)
-          const cx = e.iris[0] + e.ox - bx
-          const cy = e.iris[1] + e.oy - by
-          s.drawImage(e.irisImg, cx - e.irisSize / 2, cy - e.irisSize / 2)
-          for (const [hx, hy, hr] of e.highlights) {
-            const g = s.createRadialGradient(cx + hx, cy + hy, 0, cx + hx, cy + hy, hr)
-            g.addColorStop(0, 'rgba(255,255,255,0.95)')
-            g.addColorStop(0.7, 'rgba(255,255,255,0.85)')
-            g.addColorStop(1, 'rgba(255,255,255,0)')
-            s.fillStyle = g
-            s.beginPath()
-            s.arc(cx + hx, cy + hy, hr, 0, Math.PI * 2)
-            s.fill()
-          }
-          s.globalCompositeOperation = 'destination-in'
-          s.drawImage(e.openImg, 0, 0)
-          s.globalCompositeOperation = 'source-over'
-          s.drawImage(e.shadeImg, 0, 0)
-          s.drawImage(e.lidImg, 0, lidIndex * bh, bw, bh, 0, 0, bw, bh)
-          ectx.drawImage(e.scratch, bx - ex0, by - ey0)
-        })
-
-        gl.activeTexture(gl.TEXTURE1)
-        gl.bindTexture(gl.TEXTURE_2D, eyeTex)
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, eyeCanvas)
-        const hx = Math.max(-1, Math.min(1, headYaw / (MAX_YAW * HEAD_SHARE))) * HEAD_MAX_X
-        const hy = Math.max(-1, Math.min(1, headPitch / (MAX_PITCH * HEAD_SHARE))) * HEAD_MAX_Y
-        gl.uniform2f(uHead, hx, hy)
-        gl.uniform1f(uRoll, roll)
-        gl.uniform2f(uBrow, browL, browR)
-        gl.uniform1f(uLowLid, lowLid)
-        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
         canvas.dataset.ready = '1'
-        // Exposed for automated checks only (read-only snapshot).
-        canvas.dataset.state = `${eyes.map((e) => `${e.ox.toFixed(1)},${e.oy.toFixed(1)}`).join(';')}|${headYaw.toFixed(3)},${headPitch.toFixed(3)}|${lidIndex}|${browL.toFixed(2)},${browR.toFixed(2)},${lowLid.toFixed(2)},${roll.toFixed(4)}`
+        // Read-only snapshot for automated checks.
+        canvas.dataset.state = `${dir}|${extent.toFixed(3)}|${blinkImg ? 1 : 0}`
       }
       raf = requestAnimationFrame(tick)
 
@@ -506,7 +231,6 @@ export default function Character({ heroRef }: { heroRef: React.RefObject<HTMLEl
       }
     }
 
-    let cleanup = () => {}
     run().catch((err) => console.error('character:', err))
     return () => {
       disposed = true
@@ -516,16 +240,8 @@ export default function Character({ heroRef }: { heroRef: React.RefObject<HTMLEl
   }, [heroRef])
 
   return (
-    <div
-      aria-hidden="true"
-      className="character pointer-events-none z-0"
-    >
-      <img
-        src={`${base}poster.webp`}
-        alt=""
-        draggable={false}
-        className="absolute inset-0 h-full w-full"
-      />
+    <div aria-hidden="true" className="character pointer-events-none z-0">
+      <img src={`${base}left-00.webp`} alt="" draggable={false} className="absolute inset-0 h-full w-full" />
       <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
     </div>
   )

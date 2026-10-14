@@ -25,14 +25,14 @@
   display: flex; flex-direction: column; justify-content: center;
 }
 
-/* Hero character (src/components/Character.tsx). The art's backdrop is this red;
-   its edges are faded because the art's red is not perfectly uniform. */
+/* Hero character (src/components/Character.tsx): square video frames on the
+   clip's own red; edges faded so the frame never shows as a box. */
 .character {
-  --fade-x: linear-gradient(to right, transparent, #000 9%, #000 91%, transparent);
-  --fade-y: linear-gradient(to bottom, transparent, #000 10%);
-  position: absolute; bottom: 0; left: 59%; transform: translateX(-50%);
-  aspect-ratio: 1504 / 1290;
-  height: min(88vh, calc(100vw * 1290 / 1504));
+  --fade-x: linear-gradient(to right, transparent, #000 10%, #000 90%, transparent);
+  --fade-y: linear-gradient(to bottom, transparent, #000 8%);
+  position: absolute; bottom: 0; left: 62%; transform: translateX(-50%);
+  aspect-ratio: 1 / 1;
+  height: min(92vh, 62vw);
   -webkit-mask-image: var(--fade-x), var(--fade-y);
   -webkit-mask-composite: source-in;
   mask-image: var(--fade-x), var(--fade-y);
@@ -43,7 +43,7 @@
 
 /* Squarer landscape screens (4:3, 3:2): smaller and further right, clear of the copy. */
 @media (min-aspect-ratio: 1/1) and (max-aspect-ratio: 3/2) {
-  .character { left: 66%; height: min(78vh, calc(62vw * 1290 / 1504)); }
+  .character { left: 68%; height: min(80vh, 56vw); }
 }
 
 @media (max-aspect-ratio: 1/1) {
@@ -52,7 +52,7 @@
     --fade-y: linear-gradient(to bottom, transparent, #000 8%, #000 60%, transparent 92%);
     position: relative; left: auto; bottom: auto; transform: none;
     flex: none; margin: 56px auto 0;
-    width: min(100vw, calc(50svh * 1504 / 1290)); height: auto;
+    width: min(100vw, 52svh); height: auto;
   }
   .hero-content { position: relative; inset: auto; flex: 1; justify-content: flex-start; margin-top: -2svh; padding-bottom: 40px; }
 }
