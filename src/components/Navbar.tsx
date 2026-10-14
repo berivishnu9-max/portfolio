@@ -41,7 +41,7 @@ export default function Navbar() {
         aria-label="Primary"
         className="absolute left-0 top-0 z-10 flex h-16 w-full items-center justify-between px-[var(--gutter)] py-0 sm:h-20"
       >
-        <a href="#top" onClick={go} className="flex items-center gap-3 text-canvas no-underline">
+        <a href="#top" onClick={go} className={`flex items-center gap-3 text-canvas no-underline ${open ? 'invisible' : ''}`}>
           <span className="text-[20px] font-semibold tracking-tight sm:text-[23px]">{NAME}</span>
           <span aria-hidden="true" className="select-none text-[22px] sm:text-[26px]" style={{ letterSpacing: '-0.02em' }}>
             ✳︎
@@ -97,7 +97,7 @@ export default function Navbar() {
         aria-hidden={!open}
         // inert keeps hidden links out of the tab order and away from screen readers
         {...(!open ? { inert: '' } : {})}
-        className="fixed inset-0 z-[9] flex flex-col justify-center gap-6 bg-canvas px-8 transition-opacity duration-300 md:hidden"
+        className="fixed inset-0 z-[9] flex flex-col justify-[safe_center] gap-6 overflow-y-auto bg-canvas px-8 pb-6 pt-[72px] transition-opacity duration-300 md:hidden"
         style={{ opacity: open ? 1 : 0, pointerEvents: open ? 'auto' : 'none' }}
       >
         <ul className="m-0 flex list-none flex-col gap-5 p-0">

@@ -8,7 +8,7 @@ cell edges and one damaged cell, so the page-mascot skill's build cannot read th
 as they are. This script:
 
   1. crops each cell along the measured seams,
-  2. replaces the damaged down-right cell with the mirrored down-left one,
+  2. replaces the damaged right-facing cells with mirrors of their left-facing twins,
   3. keys out the red with a local-colour matte (the foreground colour next to each
      edge pixel is estimated from its neighbours and the alpha is solved against it),
      which keeps the red heart and the pink lips intact and removes red spill from hair,
@@ -164,20 +164,25 @@ def shirt_mask(t):
     return (a[..., 3] > 128) & (a[..., :3].min(-1) > 165)
 
 
-def register(moving, ref, search=24, margin=26):
+def register(moving, ref, search=24, margin=26, band=(0.2, 0.8)):
     """Translation that best lays `moving`'s shirt (collar and shoulders) on `ref`'s.
 
     Only an inner window is compared: the shirt is cut off at every cell's sides and
     bottom, and those cut lines sit at the same place in every cell whatever the body
-    does, so letting them vote would pull every answer towards zero.
+    does, so letting them vote would pull every answer towards zero. Horizontally the
+    window is the central band that stays visible once bust() fades the shoulders out:
+    the outer shoulders are drawn slightly differently from cell to cell (and a
+    mirrored cell's are the front's mirror image), so fitting them would shift the
+    collar, which is what the eye actually sees.
     """
     m, r = shirt_mask(moving), shirt_mask(ref)
     h, w = r.shape
+    lo, hi = max(margin, round(w * band[0])), min(w - margin, round(w * band[1]))
     best = (-1.0, 0, 0)
     for dy in range(-search, search + 1):
         for dx in range(-search, search + 1):
             y0, y1 = max(0, dy) + 0, min(h, m.shape[0] + dy)
-            x0, x1 = max(margin, dx), min(w - margin, m.shape[1] + dx) 
+            x0, x1 = max(lo, dx), min(hi, m.shape[1] + dx)
             y1 = min(y1, h - margin)
             if y1 - y0 < 40 or x1 - x0 < 40:
                 continue
@@ -316,8 +321,11 @@ if __name__ == '__main__':
     dpath, rpath = sys.argv[1], sys.argv[2]
     debug = sys.argv[sys.argv.index('--debug') + 1] if '--debug' in sys.argv else None
     dcells = cells(dpath, 'directions')
-    # Down-right is damaged (a smoke-like smear over the mouth); its mirror twin is clean.
-    dcells[8] = dcells[6].transpose(Image.FLIP_LEFT_RIGHT)
+    # The right-facing cells are damaged in the source sheet: down-right has a smoke-like
+    # smear over the mouth, and right and up-right draw a second, paler nose tip beyond
+    # the real one. Their left-facing twins are clean, so all three are mirrored from those.
+    for right, left in ((2, 0), (5, 3), (8, 6)):
+        dcells[right] = dcells[left].transpose(Image.FLIP_LEFT_RIGHT)
     rcells = cells(rpath, 'reactions')
     dk = [key(c) for c in dcells]
     rk = [key(c) for c in rcells]

@@ -34,7 +34,7 @@
     --font-display:'Instrument Sans Variable','Helvetica Neue',Arial,sans-serif;
     --font-accent:'Instrument Serif',Georgia,serif;
   }
-  @media(max-width:860px){:root{--section-y:var(--s5)}}
+  @media(max-width:860px){:root{--section-y:var(--s5)}main section[id]{scroll-margin-top:64px}}
   /* Gold: #D4AF37 for fills and rules on light, and for text on #2C302E only (6.36:1).
      Gold text or glyphs on light surfaces use --accent #7A5F12. */
   *{margin:0;padding:0;box-sizing:border-box}
@@ -162,14 +162,14 @@
     font-size:.9375rem;font-weight:500;color:var(--dim);padding:8px 0;transition:color .25s;
   }
   .tn-links a:hover,.tn-cta a:hover,.tn-links a:focus-visible,.tn-cta a:focus-visible{color:var(--fg)}
-  .tn-links a.current{color:var(--accent)}
+  #topnav a.current{color:var(--accent)}
   #topnav a:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;border-radius:3px}
   /* Over the charcoal hero the bar docks in the hero's colours, then turns light. */
   body:not(.past-hero) #topnav{background:rgba(44,48,46,.92);border-bottom-color:rgba(250,249,246,.16);color:#FAF9F6}
   body:not(.past-hero) #topnav .tn-links a,body:not(.past-hero) #topnav .tn-cta a{color:rgba(250,249,246,.78)}
   body:not(.past-hero) #topnav a:hover,body:not(.past-hero) #topnav a.current{color:#FAF9F6}
   body:not(.past-hero) #topnav a:focus-visible{outline-color:#D4AF37}
-  @media(max-width:700px){
+  @media(max-width:860px){
     .tn-name{display:none}
     .tn-nav{width:100%;gap:14px}
     /* Sections scroll sideways; Contact and CV stay pinned and visible. */
@@ -187,7 +187,7 @@
     font-size:.875rem;font-weight:500;letter-spacing:0;color:var(--dim);
   }
   .trustbar i{font-style:normal;color:var(--accent)}
-  @media(max-width:700px){.trustbar{gap:4px 16px}.trustbar i{display:none}}
+  @media(max-width:1010px){.trustbar{gap:4px 16px}.trustbar i{display:none}}
   .numbers{padding:0 var(--gutter) var(--section-y)}
   .numbers-grid{
     display:grid;grid-template-columns:repeat(4,1fr);gap:1px;
@@ -352,7 +352,7 @@
   #detail.open{transform:none}
   /* A full-width bar, so text never scrolls visibly behind the Back button. */
   .d-back{
-    position:sticky;top:0;z-index:2;display:flex;align-items:center;cursor:pointer;
+    position:sticky;top:0;z-index:5;display:flex;align-items:center;cursor:pointer;
     width:calc(100% + 12vw);min-height:56px;margin:0 -6vw 6vh;padding:0 6vw;
     background:#FFFFFF;border:0;border-bottom:1px solid var(--line);color:inherit;
   }
@@ -367,6 +367,7 @@
     background:var(--line);border:1px solid var(--line);margin-top:34px;
   }
   .d-meta div{background:#FFFFFF;padding:13px 21px}
+  @media(min-width:600px) and (max-width:900px){.d-meta{grid-template-columns:1fr 1fr}}
   .d-meta .micro{display:block;margin-bottom:6px}
   .d-meta b{font-weight:600;font-size:.95rem;line-height:1.4}
   .d-title{font-family:var(--font-display);font-weight:600;letter-spacing:-.02em;font-size:clamp(1.75rem,4.4vw,3.4375rem);line-height:1.06}
@@ -390,7 +391,7 @@
     font-size:clamp(1.5rem,3.6vw,2.125rem);line-height:1.1;display:inline-block;
     transition:color .3s ease,transform .35s ease;
   }
-  .d-next-title::after{content:" →";color:var(--accent)}
+  .d-next-title::after{content:"\00a0→";color:var(--accent)}
   .d-next:hover .d-next-title{color:var(--accent);transform:translateX(12px)}
   .d-metrics{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line)}
   .d-metrics div{background:#FFFFFF;padding:21px;transition:background .3s ease,transform .3s ease}
@@ -505,7 +506,7 @@
   .cert-card.open .cert-body{visibility:visible;transition-delay:0s}
   .cert-skills{display:flex;flex-wrap:wrap;gap:8px;margin:13px 0}
   .cert-skills span{border:1px solid var(--gold);border-radius:999px;padding:5px 13px;font-size:.74rem;color:var(--fg)}
-  .cert-id{font-size:.72rem;color:var(--dim);font-weight:300;word-break:break-all;margin-bottom:13px}
+  .cert-id{font-size:.72rem;color:var(--dim);font-weight:300;word-break:normal;overflow-wrap:anywhere;margin-bottom:13px}
   .cert-actions{display:flex;gap:8px;flex-wrap:wrap;padding-bottom:2px}
   .btn-mini{
     display:inline-block;border-radius:999px;padding:8px 16px;
@@ -669,7 +670,7 @@
 <section class="work" id="work">
   <div class="sec-head">
     <h2 class="sec-title">Selected work</h2>
-    <span class="micro">MSc projects · University of Strathclyde · 2026</span>
+    <span class="micro">MSc projects&nbsp;· University of Strathclyde&nbsp;· 2026</span>
   </div>
   <div class="work-grid">
   <div class="proj-list" id="proj-list">
@@ -693,7 +694,7 @@
       <div class="proj-main">
         <h3 class="proj-name"><button type="button" class="proj-open" aria-haspopup="dialog">Census Digital Inclusion</button></h3>
         <p class="proj-desc">Built a multi-criteria weighted scoring model across 328 local authorities, segmenting digital barriers by cause to prioritise public sector investment.</p>
-        <p class="proj-result">Result: a stable shortlist of the 55 highest-risk of 328 authorities, holding across four weighting profiles.</p>
+        <p class="proj-result">Result: the 55 highest-risk of 328 authorities prioritised; the ranking was sensitivity-tested across four weighting profiles.</p>
       </div>
       <div class="proj-kind micro">Strategic Modelling · Public Sector</div>
     </div>
@@ -1219,10 +1220,10 @@ const ILLUS = {
       <path d="M-5 -6 L6 0 L-5 6" transform="translate(109 170) rotate(252)"/>
       <path d="M-5 -6 L6 0 L-5 6" transform="translate(144 62) rotate(324)"/>
     </g>
-    <line x1="268" y1="222" x2="282" y2="226" stroke="#7A5F12" stroke-width="1.5"/>
-    <rect x="282" y="206" width="94" height="40" rx="4" fill="#FFFFFF" stroke="#7A5F12"/>
-    <text x="329" y="222" text-anchor="middle" fill="rgba(44,48,46,.75)" font-size="7.5" letter-spacing="1.5">TRANSPORT HOTSPOT</text>
-    <text x="329" y="238" text-anchor="middle" fill="#7A5F12" font-size="11" font-weight="700">4.45 KG CO₂E</text>
+    <line x1="268" y1="222" x2="280" y2="226" stroke="#7A5F12" stroke-width="1.5"/>
+    <rect x="280" y="206" width="114" height="40" rx="4" fill="#FFFFFF" stroke="#7A5F12"/>
+    <text x="337" y="222" text-anchor="middle" fill="rgba(44,48,46,.75)" font-size="7.5" letter-spacing="1.5">TRANSPORT HOTSPOT</text>
+    <text x="337" y="238" text-anchor="middle" fill="#7A5F12" font-size="11" font-weight="700">4.45 KG CO₂E</text>
   </svg>`,
   soda: `<svg viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica Neue,Arial">
     <g stroke="rgba(44,48,46,.22)" stroke-width="1.5">
@@ -1687,6 +1688,12 @@ document.querySelectorAll('.cert-card').forEach(card => {
       const on = a.getAttribute('href') === active;
       a.classList.toggle('current', on);
       if (on) a.setAttribute('aria-current', 'true'); else a.removeAttribute('aria-current');
+      /* On phones the section links scroll sideways: keep the current one in view. */
+      const strip = a.parentElement;
+      if (on && strip && strip.classList.contains('tn-links') && strip.scrollWidth > strip.clientWidth) {
+        const left = a.offsetLeft - strip.offsetLeft - 16;
+        if (Math.abs(strip.scrollLeft - left) > 4) strip.scrollLeft = left;
+      }
     });
   });
 })();

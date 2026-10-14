@@ -21,7 +21,7 @@ export const NAV_LINKS: Link[] = [
   { label: 'Contact', href: '#contact' },
 ]
 
-export const EYEBROW = 'Business Analyst · Glasgow, UK'
+export const EYEBROW = 'Business Analyst\u00a0· Glasgow, UK' // no-break space: the dot never ends a line
 // Worded as on the certificate card in index.html.
 export const CREDENTIAL = 'Microsoft Certified: Power BI Data Analyst Associate (PL-300)'
 export const POSITIONING =

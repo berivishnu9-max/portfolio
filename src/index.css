@@ -69,6 +69,11 @@
 .hero-h1 { font-size: clamp(2.2rem, 4.6vw, 4rem); }
 .hero-lede { font-size: clamp(1.05rem, 1.6vw, 1.3rem); }
 
+/* Landscape: keep the centred copy clear of the 80px hero nav on shorter windows. */
+@media (min-aspect-ratio: 1/1) and (min-height: 501px) {
+  .hero-content { padding-top: 80px; }
+}
+
 /* Phones on their side: too short for the stacked layout, so shrink everything. */
 @media (min-aspect-ratio: 1/1) and (max-height: 500px) {
   .hero-section { height: auto; min-height: 100svh; }
