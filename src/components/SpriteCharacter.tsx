@@ -17,9 +17,8 @@ import { useEffect, useRef } from 'react'
 type Manifest = { tile: number; face: [number, number]; directions: string[]; reactions: string[] }
 
 const base = `${import.meta.env.BASE_URL}mascot/`
+const LOOK_DEAD = 0.07 // pointer this close to the face (screen fraction) = look at the viewer
 const FADE_MS = 160 // cross-fade between two poses
-const DEAD_ZONE = 0.14 // pointer this close to the face (x character height) = look at the viewer
-const STICKY = (12 * Math.PI) / 180 // keep the current direction until the pointer is this far past its sector edge
 const HOLD_MS = 1300 // how long an expression stays up
 const IDLE_AFTER_MS = 3500
 const SLEEP_AFTER_MS = 30000
@@ -35,24 +34,16 @@ const LEAN = { x: 0.012, y: 0.01, roll: 2.5 }
 const SPRING = { w: 9, z: 0.72 } // natural frequency (rad/s) and damping: smooth, with a little life
 
 type Spring = { x: number; v: number }
-function stepSpring(s: Spring, target: number, dt: number) {
-  const a = SPRING.w * SPRING.w * (target - s.x) - 2 * SPRING.z * SPRING.w * s.v
+function stepSpring(s: Spring, target: number, dt: number, w = SPRING.w) {
+  const a = w * w * (target - s.x) - 2 * (w === SPRING.w ? SPRING.z : 1) * w * s.v
   s.v += a * dt
   s.x += s.v * dt
 }
 
 // Directions sheet order (row by row) and the compass angle each one stands for.
 const FRONT = 4
-const SECTORS: [number, number][] = [
-  [5, 0], // right
-  [8, 45], // down-right
-  [7, 90], // down
-  [6, 135], // down-left
-  [3, 180], // left
-  [0, -135], // up-left
-  [1, -90], // up
-  [2, -45], // up-right
-]
+// Ring poses in order of compass angle, 45 degrees apart: right, down-right, down, down-left, left, up-left, up, up-right.
+const RING = [5, 8, 7, 6, 3, 0, 1, 2]
 // Expressions sheet indices (offset by 9 in the combined frame list).
 const R = { blink: 9, heart: 10, sparkle: 11, surprised: 12, bright: 13, bashful: 14, sleepy: 15, dizzy: 16, delighted: 17 }
 // "bright" is left out: it is almost the resting face, so a click on it looks like nothing happened.
@@ -66,11 +57,6 @@ function loadImage(src: string) {
     img.onerror = reject
     img.src = src
   })
-}
-
-function angleDiff(a: number, b: number) {
-  const d = Math.abs(a - b) % (2 * Math.PI)
-  return d > Math.PI ? 2 * Math.PI - d : d
 }
 
 export default function SpriteCharacter({ heroRef }: { heroRef: React.RefObject<HTMLElement> }) {
@@ -133,7 +119,6 @@ export default function SpriteCharacter({ heroRef }: { heroRef: React.RefObject<
       let fadeStart = -Infinity
       let fadeMs = FADE_MS
       let dirty = true
-      let lookDir = FRONT // last direction chosen from the pointer
       let reaction = -1
       let reactionUntil = 0
       const clicks: number[] = []
@@ -142,6 +127,10 @@ export default function SpriteCharacter({ heroRef }: { heroRef: React.RefObject<
       const sx: Spring = { x: 0, v: 0 }
       const sy: Spring = { x: 0, v: 0 }
       const sr: Spring = { x: 0, v: 0 }
+      // Where he is looking: the pointer's offset as a vector (length 0 = at the viewer, 1 = fully turned),
+      // eased on springs. Its angle and length weight the drawn poses continuously, so there are no steps.
+      const vx: Spring = { x: 0, v: 0 }
+      const vy: Spring = { x: 0, v: 0 }
       let prev = performance.now()
       const t0 = prev
 
@@ -296,27 +285,24 @@ export default function SpriteCharacter({ heroRef }: { heroRef: React.RefObject<
           ly = Math.max(-1, Math.min(1, (pointer.y - f.y) / (window.innerHeight * 0.5)))
         }
 
-        // Which pose should be up right now?
+        // Which expression (if any) should be up right now? Directions are blended, not chosen.
         let target = FRONT
+        let tvx = 0
+        let tvy = 0
         if (reaction >= 0 && now < reactionUntil) {
           target = reaction
         } else {
           reaction = -1
           if (pointer && motionOn) {
             const f = faceAt()
-            const dx = pointer.x - f.x
-            const dy = pointer.y - f.y
-            if (Math.hypot(dx, dy) > f.h * DEAD_ZONE) {
-              const a = Math.atan2(dy, dx)
-              const cur = SECTORS.find(([d]) => d === lookDir)
-              // Stay on the current direction until the pointer is clearly past it.
-              if (!cur || angleDiff(a, (cur[1] * Math.PI) / 180) > Math.PI / 8 + STICKY) {
-                let best = SECTORS[0]
-                for (const s of SECTORS) if (angleDiff(a, (s[1] * Math.PI) / 180) < angleDiff(a, (best[1] * Math.PI) / 180)) best = s
-                lookDir = best[0]
-              }
-            } else lookDir = FRONT
-            target = lookDir
+            const dx = (pointer.x - f.x) / Math.max(1, window.innerWidth * 0.45)
+            const dy = (pointer.y - f.y) / Math.max(1, window.innerHeight * 0.45)
+            const mag = Math.hypot(dx, dy)
+            if (mag > LOOK_DEAD) {
+              const e = Math.min(1, (mag - LOOK_DEAD) / (1 - LOOK_DEAD))
+              tvx = (dx / mag) * e
+              tvy = (dy / mag) * e
+            }
           } else if (motionOn && now - lastActive > SLEEP_AFTER_MS) {
             target = R.sleepy
           } else if (motionOn && now - lastActive > IDLE_AFTER_MS) {
@@ -325,22 +311,23 @@ export default function SpriteCharacter({ heroRef }: { heroRef: React.RefObject<
               idlePose = r < 0.5 ? FRONT : r < 0.65 ? 3 : r < 0.8 ? 5 : r < 0.9 ? 0 : 2
               idleNext = now + 1800 + Math.random() * 2800
             }
-            target = idlePose
-            // glances lean the same way the face turns
-            lx = idlePose === 3 || idlePose === 0 ? -0.5 : idlePose === 5 || idlePose === 2 ? 0.5 : 0
-            ly = idlePose === 0 || idlePose === 2 ? -0.4 : 0
-          } else {
-            lookDir = FRONT
+            // glances: a gentle look the same way the face turns
+            tvx = idlePose === 3 || idlePose === 0 ? -0.6 : idlePose === 5 || idlePose === 2 ? 0.6 : 0
+            tvy = idlePose === 0 || idlePose === 2 ? -0.5 : 0
+            lx = tvx * 0.8
+            ly = tvy * 0.8
           }
           // A blink is the expression sheet's closed-eye smile, only from the front.
           if (now >= blinkAt) {
-            if (motionOn && target === FRONT && shown === FRONT) blinkUntil = now + 130
+            if (motionOn && target === FRONT && shown === FRONT && Math.hypot(vx.x, vy.x) < 0.25) blinkUntil = now + 130
             blinkAt = now + (blinkUntil > now ? nextBlink() : 700)
           }
           if (now < blinkUntil && target === FRONT) target = R.blink
         }
         show(target, now, target === R.blink || shown === R.blink ? 55 : FADE_MS)
 
+        stepSpring(vx, tvx, dt, 12)
+        stepSpring(vy, tvy, dt, 12)
         if (motionOn) {
           // A slow, uneven sway and bob, so he never freezes; smaller while he is looking at something.
           const t = (now - t0) / 1000
@@ -353,7 +340,7 @@ export default function SpriteCharacter({ heroRef }: { heroRef: React.RefObject<
           stepSpring(sr, lx * LEAN.roll + sway + dizzy, dt)
           paint(now)
         } else {
-          sx.x = sy.x = sr.x = sx.v = sy.v = sr.v = 0
+          sx.x = sy.x = sr.x = sx.v = sy.v = sr.v = vx.x = vy.x = vx.v = vy.v = 0
           if (dirty || now - fadeStart < fadeMs) paint(now)
         }
       }
@@ -364,11 +351,11 @@ export default function SpriteCharacter({ heroRef }: { heroRef: React.RefObject<
         const w = canvas!.width
         const h = canvas!.height
         // The layers only change when the pose does; a moving head just re-composites them.
-        const mix = k < 1 && from !== shown ? `${from}>${shown}@${k.toFixed(3)}` : `${shown}`
-        const key = `${mix}|${w}x${h}`
+        const mix = poseMix(k)
+        const key = mix.map(([f, a]) => `${f}:${a.toFixed(3)}`).join(',') + `|${w}x${h}`
         if (key !== layersFor) {
           layersFor = key
-          buildLayers(k, w, h)
+          buildLayers(mix, w, h)
         }
         ctx!.clearRect(0, 0, w, h)
         ctx!.drawImage(bodyC, 0, 0)
@@ -384,22 +371,49 @@ export default function SpriteCharacter({ heroRef }: { heroRef: React.RefObject<
         canvas!.dataset.ready = '1'
         if (canvas!.parentElement) canvas!.parentElement.dataset.ready = '1'
         // Read-only snapshot for automated checks.
-        canvas!.dataset.state = shown < 9 ? manifest.directions[shown] : manifest.reactions[shown - 9]
+        const len = Math.hypot(vx.x, vy.x)
+        canvas!.dataset.state =
+          shown >= 9 ? manifest.reactions[shown - 9] : len < 0.12 ? 'front' : manifest.directions[RING[Math.round(((((Math.atan2(vy.x, vx.x) * 180) / Math.PI + 360) % 360) / 45)) % 8]]
+        canvas!.dataset.look = `${vx.x.toFixed(2)},${vy.x.toFixed(2)}`
         canvas!.dataset.head = `${(sx.x * w).toFixed(1)},${(sy.x * h).toFixed(1)},${sr.x.toFixed(2)}`
       }
 
-      function buildLayers(k: number, w: number, h: number) {
-        fctx.clearRect(0, 0, w, h)
-        if (k < 1 && from !== shown) {
-          // 'lighter' adds the two premultiplied frames, so where both are opaque
-          // the sum stays opaque: a true cross-dissolve with no see-through dip.
-          fctx.globalCompositeOperation = 'lighter'
-          drawFrame(from, 1 - k)
-          drawFrame(shown, k)
-          fctx.globalCompositeOperation = 'source-over'
-        } else {
-          drawFrame(shown, 1)
+      // The frames to blend and their weights (summing to 1): the front pose, the two
+      // neighbouring ring poses either side of the look angle, and any expression on top.
+      function poseMix(k: number): [number, number][] {
+        const len = Math.min(1, Math.hypot(vx.x, vy.x))
+        const e = len * len * (3 - 2 * len) // smooth in and out of the front pose
+        const deg = ((Math.atan2(vy.x, vx.x) * 180) / Math.PI + 360) % 360
+        const pos = deg / 45
+        const i0 = Math.floor(pos) % 8
+        let f = pos - Math.floor(pos)
+        f = f * f * (3 - 2 * f)
+        const base: [number, number][] = [
+          [FRONT, 1 - e],
+          [RING[i0], e * (1 - f)],
+          [RING[(i0 + 1) % 8], e * f],
+        ]
+        // an expression fades in over `shown` and out over `from`
+        let over = 0
+        let ex = -1
+        if (shown >= 9) {
+          ex = shown
+          over = k
+        } else if (from >= 9 && k < 1) {
+          ex = from
+          over = 1 - k
         }
+        if (ex < 0 || over <= 0) return base.filter(([, a]) => a > 0.001)
+        return [...base.map(([fr, a]): [number, number] => [fr, a * (1 - over)]), [ex, over]].filter(([, a]) => a > 0.001) as [number, number][]
+      }
+
+      function buildLayers(mix: [number, number][], w: number, h: number) {
+        fctx.clearRect(0, 0, w, h)
+        // 'lighter' adds the premultiplied frames; the weights sum to 1, so where all are
+        // opaque the sum stays opaque: a true blend with no see-through dip.
+        fctx.globalCompositeOperation = 'lighter'
+        for (const [fr, a] of mix) drawFrame(fr, a)
+        fctx.globalCompositeOperation = 'source-over'
         fctx.globalAlpha = 1
 
         // Split at the neck with complementary masks: untransformed, they add back up
