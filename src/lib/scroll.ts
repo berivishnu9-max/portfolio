@@ -8,7 +8,8 @@ export function scrollToHash(e: React.MouseEvent<HTMLAnchorElement>) {
   if (!target) return
   e.preventDefault()
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  target.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' })
+  if (window.__lenis) window.__lenis.scrollTo(target)
+  else target.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' })
   if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1')
   target.focus({ preventScroll: true })
   history.replaceState(null, '', href)

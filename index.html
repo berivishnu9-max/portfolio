@@ -277,7 +277,9 @@
 
   /* ============ Work ============ */
   .work{padding:var(--section-y) var(--gutter);position:relative}
+  /* Section titles stay pinned under the header while their section scrolls past. */
   .sec-head{display:flex;flex-wrap:wrap;gap:6px 21px;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:2vh}
+  @media(min-width:861px){.sec-head{position:sticky;top:64px;z-index:4;background:var(--bg)}}
   .sec-title{font-family:var(--font-display);font-weight:700;font-size:clamp(1.9rem,3.8vw,2.75rem);letter-spacing:-.02em}
   .proj-list{counter-reset:proj}
   .proj-item{
@@ -1399,7 +1401,8 @@ document.addEventListener('click', e => {
   const target = document.querySelector(href);
   if (!target) return;
   e.preventDefault();
-  target.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+  if (window.__lenis) window.__lenis.scrollTo(target);
+  else target.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
   if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
   target.focus({ preventScroll: true });
   history.replaceState(null, '', href);
@@ -1617,6 +1620,7 @@ function openDetail(id) {
   if (topnav) topnav.inert = true;
   if (footer) footer.inert = true;
   detail.classList.add('open');
+  if (window.__lenis) window.__lenis.stop();
   detail.focus({ preventScroll: true });
 }
 function closeDetail() {
@@ -1628,6 +1632,7 @@ function closeDetail() {
   const footer = document.querySelector('.site-footer');
   if (footer) footer.inert = false;
   document.body.classList.remove('locked');
+  if (window.__lenis) window.__lenis.start();
   request(); // let the header work out whether it should be focusable again
   if (lastOpener && typeof lastOpener.focus === 'function') lastOpener.focus({ preventScroll: true });
 }

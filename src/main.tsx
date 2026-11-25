@@ -5,6 +5,9 @@ import '@fontsource-variable/instrument-sans/wght.css'
 import '@fontsource/instrument-serif/400.css'
 import '@fontsource/instrument-serif/400-italic.css'
 import './index.css'
+import { startSmoothScroll } from './lib/smooth'
+
+startSmoothScroll()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
