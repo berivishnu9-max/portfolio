@@ -19,6 +19,7 @@ type Manifest = { tile: number; face: [number, number]; directions: string[]; re
 const base = `${import.meta.env.BASE_URL}mascot/`
 const LOOK_DEAD = 0.07 // pointer this close to the face (screen fraction) = look at the viewer
 const FADE_MS = 160 // cross-fade between two poses
+const LOOK_SPRING = 5 // how tightly the head follows the pointer: lower = floatier, higher = snappier (was 12)
 const HOLD_MS = 1300 // how long an expression stays up
 const IDLE_AFTER_MS = 3500
 const SLEEP_AFTER_MS = 30000
@@ -326,8 +327,8 @@ export default function SpriteCharacter({ heroRef }: { heroRef: React.RefObject<
         }
         show(target, now, target === R.blink || shown === R.blink ? 55 : FADE_MS)
 
-        stepSpring(vx, tvx, dt, 12)
-        stepSpring(vy, tvy, dt, 12)
+        stepSpring(vx, tvx, dt, LOOK_SPRING)
+        stepSpring(vy, tvy, dt, LOOK_SPRING)
         if (motionOn) {
           // A slow, uneven sway and bob, so he never freezes; smaller while he is looking at something.
           const t = (now - t0) / 1000
