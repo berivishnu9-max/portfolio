@@ -24,6 +24,9 @@ export const NAV_LINKS: Link[] = [
 export const EYEBROW = 'Business Analyst\u00a0· Glasgow, UK' // no-break space: the dot never ends a line
 // Worded as on the certificate card in index.html.
 export const CREDENTIAL = 'Microsoft Certified: Power BI Data Analyst Associate (PL-300)'
+export const LEDE_LEAD = 'I turn' // accent follows: 'messy operations into clear decisions.'
 export const POSITIONING =
-  'MSc Business Analysis & Consulting, University of Strathclyde. Four years running a 72-bed operation taught me to turn'
+  'MSc Business Analysis & Consulting at the University of Strathclyde, built on four years running a 72-bed operation.'
 export const POSITIONING_ACCENT = 'messy operations into clear decisions.'
+// Both from the CV's personal details: right to work and start date.
+export const AVAILABILITY = 'Open to UK Business Analyst roles\u00a0· Available for an immediate start'

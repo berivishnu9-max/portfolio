@@ -79,13 +79,12 @@ export default function Navbar() {
           </span>
         </a>
 
-        <ul className="m-0 hidden list-none p-0 text-[17px] text-canvas md:flex">
-          {NAV_LINKS.map((link, i) => (
+        <ul className="m-0 hidden list-none gap-7 p-0 text-[16px] text-canvas md:flex">
+          {NAV_LINKS.map((link) => (
             <li key={link.label}>
               <a href={link.href} onClick={go} className="nav-link text-canvas no-underline">
                 {link.label}
               </a>
-              {i < NAV_LINKS.length - 1 && <span className="whitespace-pre" aria-hidden="true">, </span>}
             </li>
           ))}
         </ul>

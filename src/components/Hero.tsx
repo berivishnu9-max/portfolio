@@ -1,4 +1,4 @@
-import { CREDENTIAL, CV_URL, EYEBROW, FULL_NAME, POSITIONING, POSITIONING_ACCENT } from '../content'
+import { AVAILABILITY, CREDENTIAL, CV_URL, EYEBROW, FULL_NAME, LEDE_LEAD, POSITIONING, POSITIONING_ACCENT } from '../content'
 import { scrollToHash } from '../lib/scroll'
 
 const btn =
@@ -8,7 +8,7 @@ export default function Hero() {
   return (
     <div className="hero-content pointer-events-none z-[1] px-[var(--gutter)]">
       <div className="hero-copy pointer-events-auto relative z-10 max-w-[34rem] wide:max-w-[min(30rem,36vw)]">
-        <p className="hero-rise hero-eyebrow m-0 mb-4 text-[14px] font-medium uppercase tracking-[0.12em] text-gold sm:text-[16px]">
+        <p className="hero-rise hero-eyebrow m-0 mb-4 text-[15px] font-semibold uppercase tracking-[0.12em] text-gold sm:text-[19px]">
           {EYEBROW}
         </p>
         <h1
@@ -18,10 +18,13 @@ export default function Hero() {
           {FULL_NAME}
         </h1>
         <p className="hero-rise hero-lede mb-0 mt-5 text-canvas sm:mt-6" style={{ lineHeight: 1.5, animationDelay: '120ms' }}>
-          {POSITIONING}{' '}
+          {LEDE_LEAD}{' '}
           <em className="font-normal text-gold" style={{ fontFamily: 'var(--font-serif)', fontSize: '1.12em', lineHeight: 1 }}>
             {POSITIONING_ACCENT}
           </em>
+          <span className="mt-3 block text-canvas/85" style={{ fontSize: '0.88em' }}>
+            {POSITIONING}
+          </span>
         </p>
         <div className="hero-rise hero-ctas mt-7 flex flex-wrap items-center gap-3 sm:mt-8" style={{ animationDelay: '180ms' }}>
           <a href="#work" onClick={scrollToHash} className={`${btn} bg-gold text-charcoal hover:bg-canvas`}>
@@ -58,6 +61,13 @@ export default function Hero() {
           >
             {CREDENTIAL}
           </a>
+        </p>
+        <p
+          className="hero-rise hero-avail m-0 mt-2 flex items-start gap-2 text-[14px] leading-[1.5] text-canvas/80 sm:text-[15px]"
+          style={{ animationDelay: '280ms' }}
+        >
+          <span aria-hidden="true" className="mt-[8px] h-[6px] w-[6px] flex-none rounded-full bg-gold" />
+          {AVAILABILITY}
         </p>
       </div>
     </div>
