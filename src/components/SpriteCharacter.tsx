@@ -19,7 +19,16 @@ type Manifest = { tile: number; face: [number, number]; directions: string[]; re
 const base = `${import.meta.env.BASE_URL}mascot/`
 const LOOK_DEAD = 0.07 // pointer this close to the face (screen fraction) = look at the viewer
 const FADE_MS = 160 // cross-fade between two poses
-const LOOK_SPRING = 5 // how tightly the head follows the pointer: lower = floatier, higher = snappier (was 12)
+// --- Personality: tweak these -------------------------------------------------
+// Overlapping action: the drawn gaze/face direction (what the eyes show) darts first on a quick
+// spring, while the head's own movement (lean, shift, tilt) follows behind, softer and heavier.
+const EYE_SPRING = 13 // gaze/pose spring frequency: higher = eyes snap to the cursor faster (try 12-15)
+const HEAD_SPRING = 4.5 // head lean/tilt spring frequency: lower = heavier, later (try 4-5)
+const HEAD_DAMPING = 0.62 // < 1 lets the head settle with a faint overshoot, like real weight
+const EDGE_SOFT = 1.7 // how gently motion eases off toward the extremes: higher = softer edges (0 = linear)
+const LEAN = { x: 0.018, y: 0.012, roll: 4 } // head shift (fraction of size) and roll (degrees) at full turn
+const BREATH = { hz: 0.22, lift: 0.0045, tilt: 0.45, moving: 0.3 } // idle float: cycles/sec, rise (fraction of size), tilt (deg), strength while the mouse moves
+const STILL_AFTER_MS = 700 // mouse still this long = fully idle (breathing at full strength)
 const HOLD_MS = 1300 // how long an expression stays up
 const IDLE_AFTER_MS = 3500
 const SLEEP_AFTER_MS = 30000
@@ -30,13 +39,12 @@ const HEAD = { cy: 0.43, rx: 0.27, ry: 0.31 }
 // NECK.bottom; it turns about PIVOT, at the base of the neck, where nothing visibly moves.
 const NECK = { top: 0.66, bottom: 0.8 }
 const PIVOT = { x: 0.5, y: 0.8 }
-// How far the head leans toward the pointer: shift as a fraction of the size, tilt in degrees.
-const LEAN = { x: 0.012, y: 0.01, roll: 2.5 }
-const SPRING = { w: 9, z: 0.72 } // natural frequency (rad/s) and damping: smooth, with a little life
-
 type Spring = { x: number; v: number }
-function stepSpring(s: Spring, target: number, dt: number, w = SPRING.w) {
-  const a = w * w * (target - s.x) - 2 * (w === SPRING.w ? SPRING.z : 1) * w * s.v
+// Soft limit: roughly linear near the middle, easing off toward +-1 so motion never hits a wall.
+const soft = (v: number) => Math.tanh(EDGE_SOFT * v) / Math.tanh(EDGE_SOFT)
+
+function stepSpring(s: Spring, target: number, dt: number, w: number, z = 1) {
+  const a = w * w * (target - s.x) - 2 * z * w * s.v
   s.v += a * dt
   s.x += s.v * dt
 }
@@ -149,6 +157,8 @@ export default function SpriteCharacter({ heroRef }: { heroRef: React.RefObject<
       // --- Input -------------------------------------------------------------------
       let pointer: { x: number; y: number } | null = null
       let lastActive = performance.now()
+      let lastMove = lastActive
+      let lastPos = { x: -1, y: -1 }
       let releaseTimer = 0
       const faceAt = () => {
         const r = canvas.getBoundingClientRect()
@@ -174,6 +184,10 @@ export default function SpriteCharacter({ heroRef }: { heroRef: React.RefObject<
       const track = (x: number, y: number, target: EventTarget | null = null) => {
         pointer = inHero(x, y) ? { x, y } : null
         lastActive = performance.now()
+        if (Math.hypot(x - lastPos.x, y - lastPos.y) > 1.5) {
+          lastMove = lastActive
+          lastPos = { x, y }
+        }
         updateCursor(target)
       }
       const react = (x: number, y: number, target: EventTarget | null) => {
@@ -191,7 +205,7 @@ export default function SpriteCharacter({ heroRef }: { heroRef: React.RefObject<
         }
         reactionUntil = now + (reaction === R.dizzy ? HOLD_MS + 600 : HOLD_MS)
         show(reaction, now)
-        if (!reduceMotion.matches) sy.v -= 0.09 // the head pops up a little, then settles
+        if (!reduceMotion.matches) sy.v -= 0.06 // the head pops up a little, then settles
       }
       const onMove = (e: PointerEvent) => {
         if (e.pointerType !== 'touch') track(e.clientX, e.clientY, e.target)
@@ -282,8 +296,8 @@ export default function SpriteCharacter({ heroRef }: { heroRef: React.RefObject<
         let ly = 0
         if (pointer && motionOn && !(reaction >= 0 && now < reactionUntil)) {
           const f = faceAt()
-          lx = Math.max(-1, Math.min(1, (pointer.x - f.x) / (window.innerWidth * 0.5)))
-          ly = Math.max(-1, Math.min(1, (pointer.y - f.y) / (window.innerHeight * 0.5)))
+          lx = soft(Math.max(-1, Math.min(1, (pointer.x - f.x) / (window.innerWidth * 0.5))))
+          ly = soft(Math.max(-1, Math.min(1, (pointer.y - f.y) / (window.innerHeight * 0.5))))
         }
 
         // Which expression (if any) should be up right now? Directions are blended, not chosen.
@@ -301,8 +315,9 @@ export default function SpriteCharacter({ heroRef }: { heroRef: React.RefObject<
             const mag = Math.hypot(dx, dy)
             if (mag > LOOK_DEAD) {
               const e = Math.min(1, (mag - LOOK_DEAD) / (1 - LOOK_DEAD))
-              tvx = (dx / mag) * e
-              tvy = (dy / mag) * e
+              const es = soft(e) // eases off toward the extremes
+              tvx = (dx / mag) * es
+              tvy = (dy / mag) * es
             }
           } else if (motionOn && now - lastActive > SLEEP_AFTER_MS) {
             target = R.sleepy
@@ -327,18 +342,23 @@ export default function SpriteCharacter({ heroRef }: { heroRef: React.RefObject<
         }
         show(target, now, target === R.blink || shown === R.blink ? 55 : FADE_MS)
 
-        stepSpring(vx, tvx, dt, LOOK_SPRING)
-        stepSpring(vy, tvy, dt, LOOK_SPRING)
+        stepSpring(vx, tvx, dt, EYE_SPRING) // gaze leads
+        stepSpring(vy, tvy, dt, EYE_SPRING)
         if (motionOn) {
-          // A slow, uneven sway and bob, so he never freezes; smaller while he is looking at something.
+          // Idle life. Once the mouse has been still a moment, a slow breathing float takes over
+          // (head only: the shoulders never move); while it moves, it fades to a murmur.
           const t = (now - t0) / 1000
-          const calm = pointer ? 0.5 : 1
-          const sway = calm * (Math.sin(t * 1.21) * 0.7 + Math.sin(t * 0.53 + 1.3) * 0.3)
-          const bob = calm * Math.sin(t * 1.63 + 0.4) * 0.004
+          const still = Math.max(0, Math.min(1, (now - lastMove) / STILL_AFTER_MS))
+          const idle = pointer ? BREATH.moving + (1 - BREATH.moving) * still : 1
+          const breath = Math.sin(t * Math.PI * 2 * BREATH.hz)
+          const drift = Math.sin(t * 0.53 + 1.3) * 0.5 + Math.sin(t * 1.21) * 0.25 // slow, uneven wander
+          const lift = idle * (breath * BREATH.lift + Math.sin(t * 1.63 + 0.4) * 0.0012)
           const dizzy = reaction === R.dizzy && now < reactionUntil ? Math.sin(t * 9) * 4 : 0
-          stepSpring(sx, lx * LEAN.x, dt)
-          stepSpring(sy, ly * LEAN.y + bob, dt)
-          stepSpring(sr, lx * LEAN.roll + sway + dizzy, dt)
+          // Head tilts into the turn, and rises slightly as it swings toward the sides: a curve, not a slide.
+          const arc = -Math.abs(lx) * LEAN.y * 0.6
+          stepSpring(sx, lx * LEAN.x, dt, HEAD_SPRING, HEAD_DAMPING)
+          stepSpring(sy, ly * LEAN.y + arc + lift, dt, HEAD_SPRING, HEAD_DAMPING)
+          stepSpring(sr, lx * LEAN.roll + idle * (drift * 0.8 + breath * BREATH.tilt) + dizzy, dt, HEAD_SPRING, HEAD_DAMPING)
           paint(now)
         } else {
           sx.x = sy.x = sr.x = sx.v = sy.v = sr.v = vx.x = vy.x = vx.v = vy.v = 0
