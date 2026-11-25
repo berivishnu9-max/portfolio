@@ -37,3 +37,17 @@ Pushes to `main` build and deploy via `.github/workflows/deploy.yml`. In the rep
 Settings → Pages, the source must be set to **GitHub Actions**.
 
 Contact: berivishnu9@gmail.com · https://www.linkedin.com/in/berivishnuvardhanreddy
+
+## Live avatar (video-derived clips)
+
+`public/mascot/` is the always-available sprite character. For smooth head turns, generate nine short
+Veo clips from the character's own start and end frames, then run:
+
+```bash
+python3 tools/build-clips.py <folder-with-the-nine-mp4s>   # needs ffmpeg, Pillow, NumPy
+```
+
+This keys the green screen, pins the shoulders still, and writes frame atlases and a manifest to
+`public/clips/`. When that manifest exists the hero plays the clips (a real path of frames for every head
+direction, a looping idle with blinks); otherwise it uses the sprites. Clip names: `01-left`, `02-right`,
+`03-up`, `04-down`, `05-up-left`, `06-up-right`, `07-down-left`, `08-down-right`, `09-idle`.
